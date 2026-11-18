@@ -1,0 +1,351 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Inter:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5efe5;--ink:#1e1a15;--mut:#7a7064;--hair:#e7dfd2;--gold:#b5832a;--goldL:#dcb062;--card:#fffdf9}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink)}
+#stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse 900px 1100px at 50% 44%,#fffaf2 0%,#f7f1e7 55%,#ece3d4 100%)}
+#vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 760px 1150px at 50% 46%,transparent 62%,rgba(120,90,50,.10) 100%);z-index:85}
+#view{position:absolute;inset:0;perspective:1000px;perspective-origin:540px 880px;overflow:hidden}
+#world{position:absolute;left:540px;top:880px;width:0;height:0;transform-style:preserve-3d}
+.L{position:absolute;left:0;top:0;transform-origin:50% 50%;border-radius:22px;background:var(--card) center/cover no-repeat;
+   box-shadow:0 50px 90px -20px rgba(90,62,28,.30),0 8px 22px rgba(90,62,28,.10);overflow:hidden;backface-visibility:hidden}
+.L.mat{border:9px solid #fffdf9}
+.L.clear{background-color:transparent;box-shadow:none;border-radius:0;overflow:visible}
+.sh{position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 38%,rgba(255,250,236,.0) 42%,rgba(255,246,222,.55) 50%,rgba(255,250,236,0) 58%,transparent 62%);background-size:320% 100%;background-repeat:no-repeat}
+/* titles */
+#ttl{position:absolute;left:76px;top:150px;width:930px;z-index:60}
+#tag{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;letter-spacing:.14em;color:var(--gold)}
+#tag:before{content:'';display:inline-block;width:34px;height:2px;background:var(--gold);vertical-align:middle;margin-right:14px;transform:translateY(-3px)}
+#title{font-size:80px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin-top:12px}
+#sub{font-size:32px;font-weight:600;color:var(--mut);margin-top:14px;line-height:1.25}
+/* chat card (2D) */
+#chat{position:absolute;left:0;top:0;width:940px;background:#fffdf9;border-radius:40px;z-index:50;transform-origin:0 0;overflow:hidden;
+  box-shadow:0 60px 120px -30px rgba(90,62,28,.35),0 10px 30px rgba(90,62,28,.10),0 0 0 1px rgba(160,128,80,.14)}
+#ch{position:absolute;left:0;right:0;top:0;height:96px;display:flex;align-items:center;gap:16px;padding:0 28px;border-bottom:1px solid var(--hair);background:#fffdf9;z-index:3}
+#ch img{width:72px;height:51px}
+#ch .tn{font-size:24px;font-weight:800}
+#ch .st{font-size:18px;font-weight:600;color:var(--mut);margin-top:2px;white-space:nowrap}
+#ch .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#2fb36a;margin-right:8px}
+#msgs{position:absolute;left:0;right:0;top:96px;overflow:hidden;-webkit-mask:linear-gradient(transparent 0,#000 44px)}
+.m{position:absolute;left:0;right:0;padding:0 24px}
+.u .b{margin-left:auto;width:fit-content;max-width:600px;background:#1e1a15;color:#fffaf0;border-radius:26px 26px 8px 26px;padding:15px 22px;font-size:26px;font-weight:600;line-height:1.3}
+.e{display:flex;gap:14px}
+.av{flex:0 0 50px;height:50px;border-radius:50%;background:#f1e7d6;color:var(--gold);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1.5px rgba(181,131,42,.45)}
+.e .nm{font-size:18px;font-weight:800;color:var(--mut);margin:2px 0 6px}
+.e .b{background:#f4eee4;border-radius:8px 26px 26px 26px;padding:13px 20px;font-size:26px;font-weight:600;line-height:1.3;width:fit-content;max-width:700px}
+#comp{position:absolute;left:22px;right:22px;bottom:22px;height:78px;border-radius:39px;background:#f4eee4;display:flex;align-items:center;padding:0 12px 0 30px;font-size:30px;font-weight:600;color:#a69c8f;z-index:3;overflow:hidden}
+#comp .tx{flex:1;white-space:nowrap;overflow:hidden;color:var(--ink)}
+#caret{display:inline-block;width:3px;height:34px;background:var(--gold);vertical-align:middle;margin-left:2px}
+#send{width:56px;height:56px;border-radius:50%;background:#1e1a15;display:flex;align-items:center;justify-content:center;color:#fffaf0;font-size:28px;font-weight:800;flex:0 0 56px}
+#csh{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(220,176,98,.0) 44%,rgba(220,176,98,.45) 50%,rgba(255,240,205,0) 56%,transparent 60%);background-size:300% 100%;background-repeat:no-repeat}
+/* roster ticker */
+#tick{position:absolute;left:60px;right:60px;top:1818px;height:44px;display:flex;justify-content:space-between;z-index:55}
+#tick div{width:44px;height:44px;border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#c4b8a6;box-shadow:inset 0 0 0 1.5px #e3d8c6}
+/* world bits */
+.chip{position:absolute;left:0;top:0;height:76px;border-radius:38px;background:#fffdf9;display:flex;align-items:center;gap:14px;padding:0 30px 0 12px;font-size:28px;font-weight:700;white-space:nowrap;box-shadow:0 26px 50px -16px rgba(90,62,28,.35),0 0 0 1px rgba(160,128,80,.14);backface-visibility:hidden}
+.chip .av{flex:0 0 54px;height:54px;font-size:19px}
+.chip .ok{width:34px;height:34px;border-radius:50%;background:#2fb36a;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center}
+.lbl{position:absolute;left:16px;bottom:16px;background:rgba(30,26,21,.78);color:#fffaf0;font-size:22px;font-weight:700;padding:7px 16px;border-radius:12px}
+.lbl.g{background:var(--gold)}
+.post{background:#fffdf9;font-size:22px}
+.ph{display:flex;align-items:center;gap:12px;padding:16px 18px}
+.ph .pa{width:46px;height:46px;border-radius:50%;background:#fff url(assets/vyra-logo-en.png) center/86% no-repeat;box-shadow:0 0 0 1.5px #eadfce}
+.ph b{font-size:21px} .ph span{font-size:18px;color:var(--mut);font-weight:600}
+.ph .app{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--gold);letter-spacing:.06em}
+.pt{padding:0 18px 14px;font-size:22px;font-weight:600;line-height:1.3}
+.pi{background:center/cover no-repeat}
+#appr .row{display:flex;justify-content:space-between;font-size:24px;font-weight:600;padding:12px 0;border-top:1px solid var(--hair)}
+#appr .row span:last-child{font-weight:800}
+.btn{height:72px;border-radius:36px;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800}
+#end{position:absolute;inset:0;z-index:80;opacity:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#flash{position:absolute;inset:0;background:#fffaf0;z-index:90;opacity:0;pointer-events:none}
+</style></head>
+<body><div id="stage">
+ <div id="view"><div id="world"></div></div>
+ <div id="ttl"><div id="tag"></div><div id="title"></div><div id="sub"></div></div>
+ <div id="chat">
+  <div id="ch"><img src="assets/aimy-logo-dark.png"><div><div class="tn">VYRA launch</div><div class="st"><span class="dot"></span><span id="stt">Ready</span></div></div></div>
+  <div id="msgs"></div>
+  <div id="comp"><div class="tx"><span id="ctx"></span><span id="caret"></span><span id="ph" style="color:#a69c8f">Give the work…</span></div><div id="send">↑</div><div id="csh"></div></div>
+ </div>
+ <div id="tick"></div>
+ <div id="end">
+   <div id="glow" style="position:absolute;left:190px;top:420px;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(232,190,110,.35),rgba(232,190,110,0) 65%)"></div>
+   <img id="alogo" src="assets/aimy-logo-dark.png" style="width:560px;height:395px;position:relative;margin-top:-120px">
+   <div id="hl" style="width:0;height:2px;background:var(--gold);margin:56px 0 44px;position:relative"></div>
+   <div id="e1" style="font-size:56px;font-weight:800;letter-spacing:-.02em;position:relative">52 AI employees. One chat.</div>
+   <div id="e2" style="font-size:32px;font-weight:600;color:var(--mut);margin-top:18px;position:relative">Give the work. Approve the result.</div>
+ </div>
+ <div id="vig"></div>
+ <div id="flash"></div>
+</div>
+<script>
+const A='assets/';
+const cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const eo=p=>1-Math.pow(1-p,3);
+const eo5=p=>1-Math.pow(1-p,5);
+const eio=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+const es=p=>.5-.5*Math.cos(Math.PI*p);
+const $=id=>document.getElementById(id);
+const mk=(par,html,cls,style)=>{const d=document.createElement('div');if(cls)d.className=cls;if(style)d.style.cssText=style;d.innerHTML=html||'';par.appendChild(d);return d};
+window.DUR=57;
+
+/* ---------------- groups (depth) ---------------- */
+const G={logo:1800,brand:3700,port:5300,web:6900,yt:8500,soc:10100,cov:11700,ads:13300};
+/* ---------------- camera keys: t, x, y, z, yaw, pitch ---------------- */
+const NX=-264,NY=-73;   // notch of the V in the VYRA logo (world, logo 860 wide centered at 0,-40)
+const K=[
+ [0,0,0,-1100,0,0],[5.6,0,0,-1100,0,0],[9.0,0,0,-860,0,0],
+ [10.0,0,0,G.logo-250,0,0],[13.4,0,0,G.logo-80,0,0],
+ [14.25,NX,NY,G.logo+955,0,0],[15.3,-30,0,G.brand-200,0,0],[19.0,20,0,G.brand-20,0,0],
+ [20.2,0,0,G.port-200,0,0],[23.0,-20,0,G.port-20,0,0],
+ [24.2,0,0,G.web-200,0,0],[27.0,20,0,G.web-20,0,0],
+ [28.2,0,0,G.yt-200,0,0],[30.8,-20,0,G.yt-20,0,0],
+ [32.0,0,0,G.soc-250,0,0],[35.8,20,0,G.soc-50,0,0],
+ [37.0,0,0,G.cov-200,0,0],[39.4,0,0,G.cov-20,0,0],
+ [40.6,0,0,G.ads-250,0,0],[46.6,0,0,G.ads-120,0,0],
+ [48.6,0,0,G.ads-60,-26,6],[51.4,0,0,G.ads-20,-30,7],[53,0,0,G.ads+300,-30,7],[57,0,0,G.ads+360,-30,7]];
+function monotone(ts,vs){const n=ts.length,d=[],m=[];for(let i=0;i<n-1;i++)d.push((vs[i+1]-vs[i])/(ts[i+1]-ts[i]));
+  m[0]=0;m[n-1]=0;for(let i=1;i<n-1;i++){m[i]=(d[i-1]*d[i]<=0)?0:2/(1/d[i-1]+1/d[i])*1}
+  return t=>{if(t<=ts[0])return vs[0];if(t>=ts[n-1])return vs[n-1];let i=0;while(t>ts[i+1])i++;
+    const h=ts[i+1]-ts[i],s=(t-ts[i])/h,s2=s*s,s3=s2*s;
+    return (2*s3-3*s2+1)*vs[i]+(s3-2*s2+s)*h*m[i]+(-2*s3+3*s2)*vs[i+1]+(s3-s2)*h*m[i+1]}}
+const ts=K.map(k=>k[0]);const CX=monotone(ts,K.map(k=>k[1])),CY=monotone(ts,K.map(k=>k[2])),CZ=monotone(ts,K.map(k=>k[3])),CYAW=monotone(ts,K.map(k=>k[4])),CP=monotone(ts,K.map(k=>k[5]));
+let cam={x:0,y:0,z:0};
+
+/* ---------------- layers ---------------- */
+const world=$('world');const LS=[];
+function L(o){ // {g,x,y,dz,w,h,img,pos,html,cls,t0,rise,ry,rx,rot,t1,mat,rep}
+  const el=mk(world,o.html||'','L'+(o.cls?' '+o.cls:''),o.style||'');
+  if(o.img){el.style.backgroundImage=`url(${A+o.img})`;el.style.backgroundPosition=o.pos||'center'}
+  el.style.width=o.w+'px';el.style.height=o.h+'px';
+  if(!o.nosh){o.sh=mk(el,'','sh')}
+  o.el=el;o.z=(o.g||0)+(o.dz||0);o.seed=LS.length*1.37;LS.push(o);return o}
+function depth(z){return z-cam.z+1000}
+function layerAt(t,o){
+  const el=o.el;let vis=t>=o.t0&&(o.t1==null||t<o.t1+0.8);
+  if(!vis){el.style.display='none';return}
+  let x=o.x,y=o.y,z=o.z,s=1,op=1,rx=o.rx||0,ry=o.ry||0,rot=o.rot||0;
+  const p=cl((t-o.t0)/(o.dur||1.1));
+  if(o.rise!==false&&p<1){ // rise out of the chat dock
+    const d=depth(z);const sx=cam.x+(540-540)*d/1000,sy=cam.y+(1600-880)*d/1000;const e=eo5(p);
+    x=lerp(sx,o.x,e);y=lerp(sy,o.y,e);s=lerp(.18,1,e);op=cl(p*3);rx+=lerp(38,0,e);rot+=lerp(-4,0,e)}
+  if(o.t1!=null){const q=eio(cl((t-o.t1)/.7));op*=1-q;z+=q*(o.out??500);s*=1-.1*q}
+  if(o.fn){const r=o.fn(t,{x,y,z,s,op,rx,ry,rot});if(r)({x,y,z,s,op,rx,ry,rot}=Object.assign({x,y,z,s,op,rx,ry,rot},r))}
+  // idle float
+  y+=Math.sin(t*.9+o.seed)*5;rot+=Math.sin(t*.6+o.seed)*.35;
+  const d=depth(z);
+  op*=o.near?cl((d-o.near)/40):cl((d-180)/260);
+  if(op<=0.003){el.style.display='none';return}
+  el.style.display='block';
+  const blur=o.noblur?0:d<620?(620-d)*.012:(d>1700?Math.min(4,(d-1700)*.004):0);
+  el.style.filter=blur>.15?`blur(${blur.toFixed(2)}px)`:'none';
+  el.style.opacity=op.toFixed(3);
+  el.style.transform=`translate3d(${x-o.w/2}px,${y-o.h/2}px,${-z}px) rotateZ(${rot}deg) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
+  if(o.sh){const sp=cl((t-o.t0-.5)/1.4);o.sh.style.backgroundPosition=`${lerp(130,-30,es(sp))}% 0`;o.sh.style.opacity=sp>0&&sp<1?1:0}
+}
+
+/* roster chips along the path */
+const ROS=[['01','Project Manager'],['02','Counseling'],['05','Market Analysis'],['11','Knowledge'],['12','Funnel'],['13','Logo'],['14','Brand Kit'],['15','Portrait'],['17','Website'],['21','YouTube'],['22','Long Video'],['23','Thumbnail'],['24','X'],['25','Instagram'],['26','Short Video'],['27','Threads'],['28','TikTok'],['29','Facebook'],['35','SNS Cover'],['42','Ads']];
+const CHIPS=[];
+[[-340,-330,-900],[330,-170,-820],[-330,-10,-740],[330,150,-660],[-330,310,-580]].forEach((p,i)=>{
+  const r=ROS[i];const o=L({x:p[0],y:p[1],dz:p[2],w:420,h:76,t0:5.9+i*.16,cls:'clear',nosh:true,rise:true,dur:.9,t1:9.2,out:300,
+    html:`<div class="chip" style="position:relative"><div class="av">${r[0]}</div><span>${r[1]}</span><span class="ok" style="opacity:0">✓</span></div>`,
+    fn:(t)=>{const ok=o.el.querySelector('.ok');const k=cl((t-7.0-i*.32)/.25);ok.style.opacity=k;ok.style.transform=`scale(${lerp(.4,1,eo(k))})`}});
+  o.rise=true;CHIPS.push(o)});
+
+/* ---- 13 LOGO: nine ideas ---- */
+const LOGOS=[];
+for(let i=0;i<9;i++){const c=i%3,r=Math.floor(i/3);
+  const o=L({g:G.logo,x:(c-1)*305,y:(r-1)*215-30,dz:[60,-40,90,-20,0,40,110,-60,20][i],w:280,h:190,t0:9.75+i*.08,cls:'mat',
+    t1:i==4?null:12.0,out:700,style:'background:#fff',
+    html:`<div style="position:absolute;inset:4px;background:url(${A}logo-sheet-nine-en.png) no-repeat;background-size:300% 300%;background-position:${c*50}% ${[17,50,80][r]}%"></div>`});
+  LOGOS.push(o)}
+const pick=LOGOS[4];
+pick.el.insertAdjacentHTML('beforeend',`<div class="ring" style="position:absolute;inset:0;border-radius:14px;box-shadow:inset 0 0 0 5px var(--gold);opacity:0"></div>`);
+pick.t1=12.9;pick.out=0;
+pick.fn=(t,s)=>{const k=cl((t-12.15)/.3);pick.el.querySelector('.ring').style.opacity=k;const g=eio(cl((t-12.5)/.5));return {s:s.s*lerp(1,3.07,g),x:lerp(s.x,0,g),y:lerp(s.y,-40,g)}};
+// the picked VYRA logo as a free object
+const LOGO=L({g:G.logo,x:0,y:-40,dz:0,w:860,h:242,t0:12.75,cls:'clear',img:'vyra-logo-en.png',rise:false,dur:.4,nosh:true,near:30,noblur:true,
+  style:'background-size:contain;filter:drop-shadow(0 30px 30px rgba(90,62,28,.25))',
+  fn:(t,s)=>({op:s.op*cl((t-12.75)/.35)})});
+const glint=mk(LOGO.el,'','', 'position:absolute;inset:-20px;background:linear-gradient(110deg,transparent 40%,rgba(255,236,190,.0) 44%,rgba(255,242,210,.75) 50%,rgba(255,236,190,0) 56%,transparent 60%);background-size:300% 100%;background-repeat:no-repeat;mix-blend-mode:screen;-webkit-mask:url(assets/vyra-logo-en.png) center/calc(100% - 40px) no-repeat');
+
+/* ---- 14 BRAND KIT ---- */
+L({g:G.brand,x:-10,y:20,dz:40,w:540,h:720,t0:14.2,rise:false,img:'brandboard-en.jpg',cls:'mat',dur:1.4,
+  fn:(t,s)=>{const e=eo(cl((t-14.2)/1.6));return{s:lerp(.86,1,e),op:e}}});
+L({g:G.brand,x:-300,y:-330,dz:260,w:420,h:310,t0:15.4,img:'brand-hero-en.jpg',cls:'mat',ry:8});
+const SW=[['#FFB000','Energy Orange'],['#FF4B61','VYRA Coral'],['#FF2DBA','VYRA Pink'],['#1E1A1F','VYRA Ink']];
+SW.forEach((c,i)=>L({g:G.brand,x:i%2?290:-290,y:-120+i*150,dz:-260+i*60,w:300,h:118,t0:15.0+i*.14,ry:i%2?-10:10,
+  html:`<div style="display:flex;align-items:center;gap:16px;height:100%;padding:0 18px"><div style="width:80px;height:80px;border-radius:20px;background:${c[0]}"></div><div><div style="font-size:25px;font-weight:800">${c[1]}</div><div style="font-family:'JetBrains Mono';font-size:20px;color:#7a7064">${c[0]}</div></div></div>`}));
+L({g:G.brand,x:300,y:360,dz:120,w:330,h:220,t0:15.9,ry:-8,
+  html:`<div style="padding:22px 26px"><div style="font-family:'JetBrains Mono';font-size:17px;font-weight:700;color:#b5832a;letter-spacing:.12em">TYPE</div><div style="font-family:Inter;font-size:96px;font-weight:800;line-height:1;margin-top:6px">Aa</div><div style="font-family:Inter;font-size:24px;font-weight:500;margin-top:6px">Inter</div></div>`});
+
+/* ---- 15 PORTRAIT ---- */
+L({g:G.port,x:-250,y:-170,dz:-180,w:300,h:375,t0:19.9,img:'01-original-photo.jpg',pos:'center 30%',cls:'mat',rot:-4,html:`<div class="lbl">Selfie</div>`});
+L({g:G.port,x:150,y:60,dz:40,w:470,h:543,t0:20.6,img:'02-portrait.jpg',cls:'mat',rot:2,html:`<div class="lbl g">Studio portrait</div>`});
+L({g:G.port,x:300,y:-330,dz:280,w:280,h:225,t0:21.0,img:'07-model-photo-1.jpg',cls:'mat',rot:4});
+L({g:G.port,x:-300,y:330,dz:220,w:280,h:225,t0:21.2,img:'07-model-photo-3.jpg',cls:'mat',rot:-3});
+
+/* ---- 17 WEBSITE ---- */
+const BROW=L({g:G.web,x:-40,y:10,dz:30,w:560,h:780,t0:23.8,style:'background:#fffdf9',
+  html:`<div style="height:52px;display:flex;align-items:center;gap:9px;padding:0 18px;border-bottom:1px solid #e7dfd2"><i style="width:13px;height:13px;border-radius:50%;background:#e6b8a4"></i><i style="width:13px;height:13px;border-radius:50%;background:#e8d29a"></i><i style="width:13px;height:13px;border-radius:50%;background:#b9d7a8"></i><div style="margin-left:14px;flex:1;height:32px;border-radius:16px;background:#f4eee4;font-size:17px;font-weight:600;color:#7a7064;display:flex;align-items:center;padding-left:16px">vyra-fitness.com</div></div><div class="scr" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:url(${A}lp-tall-en.jpg) 0 0/100% auto no-repeat"></div>`,
+  fn:(t)=>{const k=es(cl((t-24.8)/3.0));BROW.el.querySelector('.scr').style.backgroundPosition=`0 ${-k*1150}px`}});
+L({g:G.web,x:-250,y:-360,dz:280,w:560,h:290,t0:24.3,img:'website-hero-en.jpg',cls:'mat',ry:10});
+L({g:G.web,x:310,y:200,dz:-220,w:250,h:520,t0:24.6,ry:-10,style:'border-radius:38px;border:9px solid #1e1a15;background-color:#1e1a15',
+  html:`<div style="position:absolute;inset:0;border-radius:29px;background:url(${A}lp-phone-screen-en.jpg) top/cover"></div>`});
+
+/* ---- 21-23 YOUTUBE ---- */
+L({g:G.yt,x:0,y:-470,dz:300,w:900,h:246,t0:27.9,img:'cover-en-fitness-1.jpg',cls:'mat'});
+const PLAY=L({g:G.yt,x:-10,y:-20,dz:20,w:720,h:500,t0:27.7,style:'background:#fffdf9',
+  html:`<div style="position:relative;height:405px;background:url(${A}thumb-en-1.jpg) center/cover"><div style="position:absolute;left:50%;top:50%;width:96px;height:68px;margin:-34px 0 0 -48px;border-radius:18px;background:rgba(30,26,21,.82);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-left:28px solid #fff;border-top:17px solid transparent;border-bottom:17px solid transparent;margin-left:6px"></div></div><div style="position:absolute;left:0;right:0;bottom:0;height:7px;background:rgba(255,255,255,.4)"><div class="pg" style="height:100%;width:0;background:#FF4B61"></div></div></div><div style="padding:18px 22px;font-size:24px;font-weight:800">Move First. Feel Strong. — 15-minute home workout</div>`,
+  fn:(t)=>{PLAY.el.querySelector('.pg').style.width=(cl((t-28.4)/3)*46)+'%'}});
+L({g:G.yt,x:-250,y:360,dz:-200,w:400,h:225,t0:28.3,img:'thumb-en-2.jpg',cls:'mat',rot:-3});
+L({g:G.yt,x:270,y:390,dz:-120,w:400,h:225,t0:28.5,img:'thumb-en-3.jpg',cls:'mat',rot:3});
+
+/* ---- 24-29 SOCIAL ---- */
+const ph=(name,handle,app)=>`<div class="ph"><div class="pa"></div><div><b>${name}</b><br><span>${handle}</span></div><div class="app">${app}</div></div>`;
+L({g:G.soc,x:0,y:20,dz:-60,w:330,h:587,t0:31.6,img:'tiktok-en-squat.jpg',style:'border-radius:30px',
+  html:`<div style="position:absolute;right:16px;bottom:120px;display:flex;flex-direction:column;gap:22px">${'<i style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85)"></i>'.repeat(3)}</div><div style="position:absolute;left:18px;bottom:22px;right:80px;color:#fff;font-size:21px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.5)">@vyra.fit<br><span style="font-weight:500">15-minute squat set at home</span></div><div style="position:absolute;left:16px;top:16px;font-family:'JetBrains Mono';font-size:16px;font-weight:700;color:#fff;background:rgba(30,26,21,.6);padding:5px 10px;border-radius:8px">TIKTOK · SHORT VIDEO</div>`});
+L({g:G.soc,x:-290,y:-290,dz:180,w:420,h:470,t0:31.9,cls:'post',ry:8,
+  html:ph('VYRA','@vyrafit','X')+`<div class="pt">15 minutes. Your living room. Start your fitness habit today.</div><div class="pi" style="margin:0 18px;height:250px;border-radius:16px;background-image:url(${A}girl-pose-3.jpg);background-position:center 20%"></div>`});
+L({g:G.soc,x:300,y:-300,dz:140,w:390,h:500,t0:32.1,cls:'post',ry:-8,
+  html:ph('vyra.fit','Home fitness','INSTAGRAM')+`<div class="pi" style="height:350px;background-image:url(${A}girl-pose-1.jpg);background-position:center 25%"></div><div class="pt" style="padding-top:12px">Move at home. Fit into your life.</div>`});
+L({g:G.soc,x:-300,y:340,dz:-220,w:400,h:250,t0:32.3,cls:'post',ry:8,
+  html:ph('vyra.fit','@vyra.fit','THREADS')+`<div class="pt" style="font-size:25px">What does your 15-minute workout look like? Show us your corner.</div>`});
+L({g:G.soc,x:300,y:350,dz:250,w:420,h:360,t0:32.5,cls:'post',ry:-8,
+  html:ph('VYRA','Sponsored · Page','FACEBOOK')+`<div class="pt">Four moves. One mat. Zero commute.</div><div class="pi" style="height:200px;background-image:url(${A}view-list-photos.jpg)"></div>`});
+
+/* ---- 35 SNS COVER ---- */
+['girl-cover-1.png','girl-cover-2.png','girl-cover-3.png'].forEach((f,i)=>L({g:G.cov,x:[-30,40,-10][i],y:-300+i*300,dz:[-140,40,220][i],w:860,h:235,t0:36.6+i*.18,img:f,cls:'mat',ry:[6,-5,6][i],
+  html:`<div class="lbl" style="left:auto;right:16px;top:14px;bottom:auto;font-family:'JetBrains Mono';font-size:16px">${['X HEADER','FACEBOOK COVER','YOUTUBE BANNER'][i]}</div>`}));
+
+/* ---- 42 ADS ---- */
+L({g:G.ads,x:-230,y:-250,dz:120,w:440,h:440,t1:46.3,out:600,t0:40.6,img:'ad-en-vyra-girl.jpg',cls:'mat',rot:-3});
+L({g:G.ads,x:240,y:-150,dz:260,w:400,h:400,t1:46.3,out:600,t0:40.85,img:'ad-en-busy-routine.jpg',cls:'mat',rot:3});
+L({g:G.ads,x:0,y:110,dz:200,w:860,h:220,t1:46.3,out:600,t0:41.1,img:'banner-en.jpg',cls:'mat'});
+const APPR=L({g:G.ads,x:40,y:240,dz:-330,w:600,h:330,t1:46.3,out:600,t0:41.9,
+  html:`<div id="appr" style="padding:24px 30px"><div style="display:flex;align-items:center;gap:14px;margin-bottom:12px"><div class="av">42</div><div><div style="font-size:26px;font-weight:800">Campaign draft</div><div style="font-size:19px;font-weight:600;color:#7a7064">Ads · waiting for you</div></div></div>
+  <div class="row"><span>Creatives</span><span>3 ready</span></div><div class="row"><span>Spend</span><span class="sp">Paused until you approve</span></div>
+  <div style="display:flex;gap:14px;margin-top:14px"><div class="btn ab" style="flex:1.6;background:#1e1a15;color:#fffaf0">Approve</div><div class="btn" style="flex:1;background:#f4eee4">Edit</div></div></div>
+  <div class="tap" style="position:absolute;left:150px;top:270px;width:20px;height:20px;border-radius:50%;opacity:0"></div>`,
+  fn:(t)=>{const k=cl((t-43.85)/.2),ab=APPR.el.querySelector('.ab');
+    ab.style.background=k>.5?'#2fb36a':'#1e1a15';ab.textContent=k>.5?'Approved ✓':'Approve';ab.style.transform=`scale(${1-.05*Math.sin(Math.PI*cl((t-43.75)/.3))})`;
+    APPR.el.querySelector('.sp').textContent=k>.5?'Approved by you':'Paused until you approve';
+    const r=cl((t-43.8)/.7),tp=APPR.el.querySelector('.tap');const R=10+110*eo(r);
+    tp.style.cssText=`position:absolute;left:${190-R}px;top:${270-R}px;width:${2*R}px;height:${2*R}px;border-radius:50%;border:3px solid #dcb062;opacity:${r>0&&r<1?1-r:0}`}});
+
+/* ---- finale stack: representative layers come back as an exploded stack ---- */
+const REP=[['vyra-logo-en.png',860,242,'clear'],['brandboard-en.jpg',540,720],['02-portrait.jpg',470,543],['website-hero-en.jpg',560,290],['thumb-en-1.jpg',560,315],['tiktok-en-squat.jpg',330,587],['girl-cover-1.png',700,191],['ad-en-vyra-girl.jpg',440,440]];
+const STK=REP.map((r,i)=>{const sc=(r[3]?400:450)/Math.max(r[1],r[2]*0.75);
+  const o=L({x:0,y:0,w:r[1],h:r[2],t0:46.4+i*.13,img:r[0],cls:r[3]||'mat',rise:false,nosh:!!r[3],t1:51.0+i*.04,out:900,
+    style:r[3]?'background-size:contain':'',
+    fn:(t,s)=>{const e=eo5(cl((t-o.t0)/1.2)),q=eio(cl((t-o.t1)/.7));const zc=cam.z+(i-3.5)*175+330;
+      return {x:cam.x+70+(i-3.5)*48,y:cam.y+30-(i-3.5)*22,z:zc+(1-e)*700+q*900,s:sc,op:e*(1-q),rx:0,rot:0}}});
+  return o});
+
+/* ---------------- chat ---------------- */
+const msgs=$('msgs');const MS=[];
+function um(t,text){const el=mk(msgs,`<div class="b">${text}</div>`,'m u');MS.push({t,el})}
+function em(t,num,name,text){const el=mk(msgs,`<div class="av">${num}</div><div><div class="nm">${num} · ${name}</div><div class="b">${text}</div></div>`,'m e');MS.push({t,el})}
+um(3.15,'Launch my home-fitness brand, VYRA.');
+em(4.7,'01','Project Manager','On it. 52 AI employees, in order.');
+em(9.8,'13','Logo','Nine ideas are ready. Pick one.');
+um(12.2,'This one.');
+em(15.4,'14','Brand Kit','Your brand kit is ready.');
+em(20.0,'15','Portrait','Selfie in. Studio portrait done.');
+em(23.9,'17','Website','Landing page ready to preview.');
+em(27.9,'23','Thumbnail','Long video set. Three thumbnails.');
+em(31.7,'24','Social team','Posts drafted for every app.');
+em(36.7,'35','SNS Cover','Covers for every profile.');
+em(40.6,'42','Ads','Campaign drafted. Waiting for your approval.');
+um(43.95,'Approved.');
+const STT=[[0,'Ready'],[3.3,'01 Project Manager is working'],[7.0,'02 – 12 are working'],[9.6,'13 Logo is working'],[14.6,'14 Brand Kit is working'],[19.7,'15 Portrait is working'],[23.6,'17 Website is working'],[27.6,'21 – 23 YouTube team working'],[31.4,'24 – 29 Social team working'],[36.4,'35 SNS Cover is working'],[40.3,'42 Ads · waiting for you'],[44.0,'42 Ads · approved by you']];
+const TYPE='Launch my home-fitness brand, VYRA.';
+const tick=$('tick');ROS.forEach(r=>mk(tick,r[0]));
+const ACT=[[3.3,0],[7.0,1],[7.3,2],[7.6,3],[7.9,4],[9.6,5],[14.6,6],[19.7,7],[23.6,8],[27.6,9],[28.4,10],[29.2,11],[31.4,12],[32.0,13],[32.6,14],[33.2,15],[33.8,16],[34.4,17],[36.4,18],[40.3,19]];
+function chatGeom(t){ // macro → centered → dock
+  const full={x:70,y:500,w:940,h:1160,s:1};
+  const dock={x:60,y:1420,w:960,h:380,s:1};
+  const k1=eio(cl((t-3.1)/1.4)), k2=eio(cl((t-5.4)/1.3));
+  // macro: composer filling the frame, panning with the caret
+  const ty=cl((t-0.5)/2.2);const pan=lerp(0,520,es(ty));
+  const macro={x:-60-pan,y:880-1.85*(1160-61),w:940,h:1160,s:1.85};
+  let g={};for(const k of ['x','y','w','h','s'])g[k]=lerp(lerp(macro[k],full[k],k1),dock[k],k2);
+  return g}
+function chatAt(t){
+  const c=$('chat'),g=chatGeom(t);
+  c.style.width=g.w+'px';c.style.height=g.h+'px';
+  const rx=lerp(14,0,eio(cl((t-3.1)/1.4)));
+  c.style.transform=`translate(${g.x}px,${g.y}px) scale(${g.s})`;
+  const fin=cl((t-51.4)/.8);c.style.opacity=1-eio(fin);c.style.display=fin>=1?'none':'block';
+  // typing
+  const n=Math.floor(TYPE.length*cl((t-0.5)/2.2));const sent=t>=3.05;
+  $('ctx').textContent=sent?'':TYPE.slice(0,n);$('ph').style.display=(n>0||t>0.45)&&!sent?'none':'inline';
+  $('caret').style.opacity=sent?0:(Math.floor(t*2.2)%2?1:.25)*cl(t/.3);
+  $('send').style.transform=`scale(${1-.12*Math.sin(Math.PI*cl((t-2.85)/.3))})`;
+  $('send').style.background=n>=TYPE.length&&!sent?'#b5832a':'#1e1a15';
+  $('csh').style.backgroundPosition=`${lerp(120,-20,es(cl((t-.15)/1.3)))}% 0`;
+  // status
+  let s='Ready';for(const x of STT)if(t>=x[0])s=x[1];$('stt').textContent=s;
+  // messages, bottom-anchored with scroll
+  const area=g.h-96-122;msgs.style.height=area+'px';
+  MS.forEach(m=>m.el.style.display='');let y=16;const ys=[];
+  MS.forEach(m=>{const p=eo(cl((t-m.t)/.4));ys.push(y);m.h=m.h||m.el.offsetHeight||90;if(t>=m.t)y+=(m.el.offsetHeight+16)*p});
+  const scroll=Math.max(0,y-area);
+  MS.forEach((m,i)=>{const p=cl((t-m.t)/.4);if(p<=0){m.el.style.display='none';return}m.el.style.display='';const e=eo(p);
+    m.el.style.transform=`translateY(${ys[i]-scroll+20*(1-e)}px)`;m.el.style.opacity=e});
+  // ticker
+  let act=-1;for(const a of ACT)if(t>=a[0])act=a[1];
+  const tv=cl((t-5.6)/.8)*(1-cl((t-51.4)/.6));tick.style.opacity=tv;
+  [...tick.children].forEach((d,i)=>{const on=i==act&&t<44,done=i<act||(t>=44&&i<=act);
+    d.style.background=on?'#b5832a':done?'#1e1a15':'transparent';d.style.color=on||done?'#fffaf0':'#c4b8a6';d.style.boxShadow=on||done?'none':'inset 0 0 0 1.5px #e3d8c6';
+    d.style.transform=`scale(${on?1.12:1})`});
+}
+
+/* ---------------- titles ---------------- */
+const TT=[
+ [0.9,2.9,'THE BRIEF','One line.','Typed once, in one chat.'],
+ [4.5,9.3,'01 · PROJECT MANAGER','One chat. In order.','A company of 52 AI employees.'],
+ [9.6,13.6,'13 · LOGO','Nine ideas.','You pick one.'],
+ [14.9,19.4,'14 · BRAND KIT','The full look.','Logo, colors, type and photos.'],
+ [19.8,23.4,'15 · PORTRAIT','Selfie in.','Studio portrait out.'],
+ [23.7,27.4,'17 · WEBSITE','The landing page.','Built in the same chat.'],
+ [27.7,31.3,'21 · 22 · 23 · YOUTUBE','The channel.','Long video and thumbnails.'],
+ [31.5,36.2,'24 – 29 · SOCIAL','Posts for every app.','X, Instagram, Threads, TikTok, Facebook.'],
+ [36.5,39.9,'35 · SNS COVER','Every profile, dressed.','A cover for each channel.'],
+ [40.4,46.4,'42 · ADS','The campaign.','Nothing spends until you approve.'],
+ [46.8,51.3,'VYRA','One line in.','A whole launch out.'],
+];
+function titleAt(t){let cur=null;for(const x of TT)if(t>=x[0]-.05&&t<x[1]+.6)cur=x;
+  const el=$('ttl');if(!cur){el.style.opacity=0;return}
+  $('tag').textContent=cur[2];$('title').textContent=cur[3];$('sub').textContent=cur[4];
+  const a=eo5(cl((t-cur[0])/.8)),b=eio(cl((t-cur[1])/.45));
+  el.style.opacity=a*(1-b);el.style.transform=`translateY(${(1-a)*34-b*24}px)`;
+  $('tag').style.transform=`translateX(${(1-eo5(cl((t-cur[0]-.08)/.8)))*-30}px)`;
+  $('sub').style.opacity=cl((t-cur[0]-.25)/.5)}
+
+/* ---------------- end ---------------- */
+function endAt(t){const e=$('end');const p=cl((t-51.9)/1.2);e.style.opacity=eo(p);
+  $('alogo').style.transform=`scale(${lerp(.92,1,eo5(cl((t-51.9)/1.8)))})`;
+  $('glow').style.opacity=.6+.4*Math.sin(cl((t-52)/4)*Math.PI);
+  $('hl').style.width=lerp(0,120,eo5(cl((t-52.7)/.9)))+'px';
+  $('e1').style.opacity=cl((t-52.9)/.6);$('e1').style.transform=`translateY(${(1-eo(cl((t-52.9)/.8)))*22}px)`;
+  $('e2').style.opacity=cl((t-53.5)/.6);$('e2').style.transform=`translateY(${(1-eo(cl((t-53.5)/.8)))*18}px)`}
+
+window.seek=function(t){
+  cam={x:CX(t),y:CY(t),z:CZ(t)};const yaw=CYAW(t),pit=CP(t);
+  world.style.transform=`rotateX(${pit}deg) rotateY(${yaw}deg) translate3d(${-cam.x}px,${-cam.y}px,${cam.z}px)`;
+  LS.forEach(o=>layerAt(t,o));
+  // logo glint
+  glint.style.backgroundPosition=`${lerp(120,-20,es(cl((t-12.9)/1.0)))}% 0`;
+  chatAt(t);titleAt(t);endAt(t);
+  $('flash').style.opacity=0;
+};
+seek(0);
+</script></body></html>

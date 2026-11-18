@@ -1,0 +1,617 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#faf7f4;overflow:hidden}canvas{display:block}</style>
+</head><body><canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// AIMY promo v24 "Zoom-through" — one continuous dive, every visual a pure function of t (window.seek)
+const W = 1920, H = 1080;
+const C = document.getElementById('c'), X = C.getContext('2d');
+const F = '"Plus Jakarta Sans"';
+['400','500','600','700','800','italic 800'].forEach(w => document.fonts.load(`${w} 40px "Plus Jakarta Sans"`));
+const IMG = {};
+['logo-sheet-nine-en.png','vyra-logo-en.png','aimy-logo-dark.png','01-original-photo.jpg','02-portrait.jpg','website-hero-en.jpg',
+ 'thumb-en-1.jpg','thumb-en-2.jpg','thumb-en-3.jpg','tiktok-en-squat.jpg','girl-pose-1.jpg','girl-pose-2.jpg','girl-pose-3.jpg','girl-pose-4.jpg',
+ 'girl-cover-1.png','cover-en-fitness-1.jpg','cover-en-move-your-city.jpg','ad-en-vyra-girl.jpg','ad-en-busy-routine.jpg','banner-en.jpg',
+ 'brand-hero-en.jpg','07-model-photo-1.jpg'].forEach(n => { const i = new Image(); i.src = 'assets/' + n; IMG[n] = i; });
+
+// ---------- math ----------
+const cl = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ss = v => { v = cl(v); return v * v * (3 - 2 * v); };
+const eio = v => { v = cl(v); return v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
+const eout = v => 1 - Math.pow(1 - cl(v), 3);
+const lerp = (a, b, p) => a + (b - a) * p;
+const lr = (a, b, p) => a.map((v, i) => lerp(v, b[i], p));
+const pop = (t, t0, d = .45) => { const v = cl((t - t0) / d); return v <= 0 ? 0 : 1 - Math.pow(1 - v, 3) * Math.cos(v * 4.2) ; };
+
+// ---------- timeline (seconds; VO-driven, see audio/words.json) ----------
+const T = window.TL || {};
+const DUR = T.DUR || 53.4; window.DUR = DUR;
+// level arrival times (camera reaches depth k fully) — dive k-1 → k ends here
+const ARR = T.ARR || [0, 4.0, 11.6, 16.4, 21.1, 23.45, 26.35, 29.75, 32.45, 35.95, 38.7];
+const DIVE = T.DIVE || 1.25;              // seconds per dive
+const PULL0 = T.PULL0 || 43.4, PULL1 = T.PULL1 || 46.6;  // pull back out 10 → 0
+const END0 = T.END0 || 46.6;              // end card fade starts
+const EV = T.EV || { send: 4.3, reply: 5.4, card: 7.2, pick: 18.75, approve: 42.2, logoDraw: 13.0 };                    // misc event times
+
+// ---------- portals: 16:9 rect of child inside parent (local 1920×1080 coords) ----------
+// portal[k] = rect of level k+1 inside level k
+const PORT = [
+  [660, 199, 600, 337.5],     // 0 desk → laptop screen
+  [780, 470, 576, 324],       // 1 chat → plan artifact card
+  [1080, 380, 640, 360],      // 2 plan → logo preview tile
+  [760, 467.5, 400, 225],     // 3 nine logos → picked one (center)
+  [1176, 548, 544, 306],      // 4 brand kit → portrait photo tile
+  [1336, 560, 448, 252],      // 5 portrait → website browser card
+  [560, 300, 800, 450],       // 6 website → YouTube embed (after scroll)
+  [1300, 700, 448, 252],      // 7 YouTube → posts card
+  [1120, 650, 640, 360],      // 8 posts → X profile card
+  [120, 690, 576, 324],       // 9 SNS cover → ads card
+];
+const NL = 11;
+
+// ---------- camera depth d(t) ----------
+function depth(t) {
+  if (t >= PULL0) {
+    const p = eio((t - PULL0) / (PULL1 - PULL0));
+    return 10 * (1 - p);
+  }
+  let d = 0;
+  for (let k = 1; k < NL; k++) {
+    const a = ARR[k], s = a - DIVE;
+    if (t >= a) d = k;
+    else if (t > s) { d = k - 1 + eio((t - s) / DIVE); break; }
+    else break;
+  }
+  // gentle constant push while holding (never static)
+  if (d === Math.floor(d) && d < 10) {
+    const k = d, nextS = ARR[k + 1] - DIVE, a = ARR[k];
+    const p = cl((t - a) / Math.max(.1, nextS - a));
+    d += 0.07 * p;
+    // fold remaining into dive start so it's continuous: dive starts from k+0.07
+  }
+  return d;
+}
+// dive must start from k+0.07: adjust above by re-mapping within dive
+function depthC(t) {
+  if (t >= PULL0) return depth(t);
+  for (let k = 1; k < NL; k++) {
+    const a = ARR[k], s = a - DIVE;
+    if (t > s && t < a) return (k - 1 + 0.07) + (1 - 0.07) * eio((t - s) / DIVE);
+  }
+  return depth(t);
+}
+
+// settle progress of a level (arrival state → final layout); rewinds on pull-out
+function settle(k, t, d, dur = 1.1, lag = 0.05) {
+  let u = ss((t - ARR[k] - lag) / dur);
+  if (t >= PULL0) u = Math.min(u, ss((d - (k - 1)) * 1.4 - 0.2));
+  return u;
+}
+
+// ---------- drawing helpers ----------
+function rr(x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); X.beginPath(); X.moveTo(x + r, y); X.arcTo(x + w, y, x + w, y + h, r); X.arcTo(x + w, y + h, x, y + h, r); X.arcTo(x, y + h, x, y, r); X.arcTo(x, y, x + w, y, r); X.closePath(); }
+function fillRR(x, y, w, h, r, c) { rr(x, y, w, h, r); X.fillStyle = c; X.fill(); }
+function shadowed(fn, blur = 40, oy = 16, c = 'rgba(60,30,70,.16)') { X.save(); X.shadowColor = c; X.shadowBlur = blur; X.shadowOffsetY = oy; fn(); X.restore(); }
+function card(x, y, w, h, r = 20, c = '#fff', sh = 1) { if (sh) shadowed(() => fillRR(x, y, w, h, r, c), 46 * sh, 18 * sh, `rgba(60,30,70,${.15 * sh})`); else fillRR(x, y, w, h, r, c); }
+function txt(s, x, y, size, wt = 600, col = '#15131a', al = 'left', bl = 'alphabetic', it = '') { X.font = `${it}${wt} ${size}px ${F}`; X.fillStyle = col; X.textAlign = al; X.textBaseline = bl; X.fillText(s, x, y); }
+function tw(s, size, wt = 600) { X.font = `${wt} ${size}px ${F}`; return X.measureText(s).width; }
+function wrap(s, x, y, maxW, size, lh, wt = 600, col = '#15131a', maxLines = 9) {
+  const words = s.split(' '); let line = '', n = 0;
+  for (const w of words) { const tst = line ? line + ' ' + w : w; if (tw(tst, size, wt) > maxW && line) { txt(line, x, y + n * lh, size, wt, col); line = w; n++; if (n >= maxLines) return n; } else line = tst; }
+  if (line) txt(line, x, y + n * lh, size, wt, col); return n + 1;
+}
+function grad(x0, y0, x1, y1, stops) { const g = X.createLinearGradient(x0, y0, x1, y1); stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c)); return g; }
+const GR = (x, y, w) => grad(x, y, x + w, y, ['#FF8A1F', '#FF4B61', '#FF2DBA']);
+// draw image cover-fit into rect (optional focus fx,fy 0..1), with optional crop source rect
+function imgCover(im, x, y, w, h, fx = .5, fy = .5, src) {
+  if (!im || !im.complete || !im.naturalWidth) { X.fillStyle = '#eee'; X.fillRect(x, y, w, h); return; }
+  let [sx, sy, sw, sh] = src || [0, 0, im.naturalWidth, im.naturalHeight];
+  const ar = w / h, sar = sw / sh;
+  if (sar > ar) { const nw = sh * ar; sx += (sw - nw) * fx; sw = nw; } else { const nh = sw / ar; sy += (sh - nh) * fy; sh = nh; }
+  X.drawImage(im, sx, sy, sw, sh, x, y, w, h);
+}
+function imgRR(im, x, y, w, h, r, fx, fy, src) { X.save(); rr(x, y, w, h, r); X.clip(); imgCover(im, x, y, w, h, fx, fy, src); X.restore(); }
+function imgFit(im, x, y, w, h, src) { // contain
+  if (!im || !im.naturalWidth) return; let [sx, sy, sw, sh] = src || [0, 0, im.naturalWidth, im.naturalHeight];
+  const s = Math.min(w / sw, h / sh); X.drawImage(im, sx, sy, sw, sh, x + (w - sw * s) / 2, y + (h - sh * s) / 2, sw * s, sh * s);
+}
+function avatar(x, y, r, label, c1 = '#6d5dfc', c2 = '#c04cf0') {
+  X.beginPath(); X.arc(x, y, r, 0, 7); X.fillStyle = grad(x - r, y - r, x + r, y + r, [c1, c2]); X.fill();
+  txt(label, x, y + 1, r * .78, 800, '#fff', 'center', 'middle');
+}
+function check(x, y, r, p = 1) {
+  if (p <= 0) return; X.save(); X.translate(x, y); X.scale(p, p);
+  X.beginPath(); X.arc(0, 0, r, 0, 7); X.fillStyle = '#22c55e'; X.fill();
+  X.beginPath(); X.moveTo(-r * .45, 0); X.lineTo(-r * .1, r * .35); X.lineTo(r * .5, -r * .35); X.strokeStyle = '#fff'; X.lineWidth = r * .28; X.lineCap = 'round'; X.lineJoin = 'round'; X.stroke(); X.restore();
+}
+function badge(x, y, s, bg = '#15131a', fg = '#fff', size = 18) { const w = tw(s, size, 800) + size * 1.4; fillRR(x, y, w, size * 1.9, size * .95, bg); txt(s, x + w / 2, y + size * .97, size, 800, fg, 'center', 'middle'); return w; }
+function tag(s, x, y, size = 18) { X.font = `800 ${size}px ${F}`; const w = X.measureText(s).width + s.length * size * .16; X.save(); X.fillStyle = GR(x, y, w); X.textBaseline = 'alphabetic'; X.textAlign = 'left'; if ('letterSpacing' in X) X.letterSpacing = `${size * .16}px`; X.fillText(s, x, y); X.restore(); }
+let PAT = null;
+function dots() { if (PAT) return PAT; const c = document.createElement('canvas'); c.width = c.height = 44; const g = c.getContext('2d'); g.fillStyle = 'rgba(40,20,60,.09)'; g.beginPath(); g.arc(22, 22, 2.2, 0, 7); g.fill(); PAT = X.createPattern(c, 'repeat'); return PAT; }
+function studioBg(c1, c2, bx1 = .18, by1 = .2, bx2 = .85, by2 = .85) {
+  X.fillStyle = '#faf7f4'; X.fillRect(0, 0, W, H);
+  for (const [c, bx, by, r] of [[c1, bx1, by1, 900], [c2, bx2, by2, 950]]) {
+    const g = X.createRadialGradient(W * bx, H * by, 0, W * bx, H * by, r); g.addColorStop(0, c); g.addColorStop(1, 'rgba(250,247,244,0)'); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  }
+  X.fillStyle = dots(); X.fillRect(0, 0, W, H);
+}
+// a cursor (arrow) at x,y with press amount
+function cursor(x, y, press = 0, a = 1) {
+  if (a <= 0) return; X.save(); X.globalAlpha = a; X.translate(x, y); const s = 1.5 * (1 - press * .15); X.scale(s, s);
+  X.beginPath(); X.moveTo(0, 0); X.lineTo(0, 22); X.lineTo(6, 17); X.lineTo(10, 26); X.lineTo(14, 24); X.lineTo(10, 16); X.lineTo(17, 16); X.closePath();
+  X.fillStyle = '#15131a'; X.strokeStyle = '#fff'; X.lineWidth = 2; X.fill(); X.stroke(); X.restore();
+}
+function ring(x, y, r, p, col = '#FF4B61') { if (p <= 0 || p >= 1) return; X.save(); X.globalAlpha = 1 - p; X.beginPath(); X.arc(x, y, r * (0.3 + p), 0, 7); X.strokeStyle = col; X.lineWidth = 6 * (1 - p) + 1; X.stroke(); X.restore(); }
+
+// sheet crops (logo-sheet-nine-en.png 2048²): 3×3 cells
+const LC = (i) => { const cx = [352, 1030, 1690][i % 3], cy = [325, 972, 1555][Math.floor(i / 3)]; return [cx - 330, cy - 125, 660, 250]; };
+
+// ================= LEVELS (each draws in local 1920×1080) =================
+const L = [];
+
+// ---- L0: white studio desk with a laptop ----
+L[0] = (t, d) => {
+  // cyclorama wall
+  X.fillStyle = grad(0, 0, 0, 760, ['#f3f1ee', '#f8f6f3', '#efece8']); X.fillRect(0, 0, W, 760);
+  let g = X.createRadialGradient(960, 330, 50, 960, 330, 1100); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)'); X.fillStyle = g; X.fillRect(0, 0, W, 760);
+  // soft pastel glow behind laptop (brand)
+  g = X.createRadialGradient(960, 420, 0, 960, 420, 760); g.addColorStop(0, 'rgba(255,150,120,.18)'); g.addColorStop(.5, 'rgba(200,140,255,.10)'); g.addColorStop(1, 'rgba(255,255,255,0)'); X.fillStyle = g; X.fillRect(0, 0, W, 760);
+  // desk top
+  X.fillStyle = grad(0, 690, 0, 1080, ['#ffffff', '#f6f4f1', '#ebe7e2']); X.fillRect(0, 690, W, 390);
+  X.fillStyle = 'rgba(0,0,0,.05)'; X.fillRect(0, 688, W, 3);
+  // desk front edge
+  X.fillStyle = grad(0, 1010, 0, 1080, ['#e9e5df', '#d9d4cd']); X.fillRect(0, 1010, W, 70);
+  // window light stripes on the wall
+  X.save(); X.globalAlpha = .35; for (let i = 0; i < 3; i++) { X.fillStyle = 'rgba(255,255,255,.9)'; X.beginPath(); const x0 = 1450 + i * 120; X.moveTo(x0, 60); X.lineTo(x0 + 70, 60); X.lineTo(x0 + 210, 680); X.lineTo(x0 + 140, 680); X.fill(); } X.restore();
+  // plant (left)
+  shadowed(() => { X.fillStyle = '#ffffff'; rr(250, 560, 150, 140, 18); X.fill(); }, 30, 10, 'rgba(0,0,0,.12)');
+  X.fillStyle = grad(250, 0, 400, 0, ['#f2f0ed', '#ffffff', '#e8e5e1']); rr(250, 560, 150, 140, 18); X.fill();
+  const leaves = [[325, 470, 30, 95, -.5], [300, 500, 26, 80, -1.0], [350, 495, 26, 85, .6], [280, 530, 22, 60, -1.4], [372, 530, 22, 62, 1.2], [325, 430, 22, 70, .1]];
+  leaves.forEach(([x, y, rx, ry, a], i) => { const sw = Math.sin(t * 1.1 + i) * .03; X.save(); X.translate(x, y + 60); X.rotate(a * .6 + sw); X.beginPath(); X.ellipse(0, -ry * .5, rx, ry * .62, 0, 0, 7); X.fillStyle = i % 2 ? '#7fae8c' : '#93c09f'; X.fill(); X.restore(); });
+  // mug (right)
+  shadowed(() => fillRR(1500, 590, 110, 120, 14, '#fff'), 26, 10, 'rgba(0,0,0,.12)');
+  X.fillStyle = grad(1500, 0, 1610, 0, ['#f1efec', '#fff', '#e6e3df']); rr(1500, 590, 110, 120, 14); X.fill();
+  X.fillStyle = GR(1500, 0, 110); X.fillRect(1500, 630, 110, 16);
+  X.beginPath(); X.ellipse(1628, 646, 26, 30, 0, 0, 7); X.lineWidth = 12; X.strokeStyle = '#efece8'; X.stroke();
+  // notebook + pen
+  X.save(); X.translate(1380, 860); X.transform(1, 0, -.35, 1, 0, 0); shadowed(() => fillRR(0, 0, 300, 110, 8, '#fdfcfa'), 18, 6, 'rgba(0,0,0,.10)'); X.fillStyle = '#FF8A1F'; X.fillRect(0, 0, 14, 110); X.restore();
+  X.save(); X.translate(1430, 990); X.rotate(-.08); fillRR(0, 0, 240, 10, 5, '#2a2830'); X.restore();
+  // phone lying on desk
+  X.save(); X.translate(330, 880); X.transform(1, 0, .45, 1, 0, 0); shadowed(() => fillRR(0, 0, 230, 100, 18, '#1b1a20'), 18, 6, 'rgba(0,0,0,.18)'); X.restore();
+  // laptop shadow
+  g = X.createRadialGradient(960, 660, 10, 960, 660, 520); g.addColorStop(0, 'rgba(40,30,50,.28)'); g.addColorStop(1, 'rgba(40,30,50,0)'); X.save(); X.translate(960, 662); X.scale(1, .1); X.translate(-960, -662); X.fillStyle = g; X.fillRect(300, 300, 1320, 720); X.restore();
+  // laptop lid
+  shadowed(() => fillRR(640, 182, 640, 394, 22, '#cfd0d5'), 30, 8, 'rgba(0,0,0,.12)');
+  fillRR(642, 184, 636, 390, 20, '#16161a');
+  X.beginPath(); X.arc(960, 191, 3, 0, 7); X.fillStyle = '#333'; X.fill();
+  // base (keyboard deck in perspective)
+  X.beginPath(); X.moveTo(612, 574); X.lineTo(1308, 574); X.lineTo(1392, 636); X.lineTo(528, 636); X.closePath(); X.fillStyle = grad(0, 574, 0, 636, ['#d8d9de', '#c4c5cb']); X.fill();
+  fillRR(520, 634, 880, 14, 7, '#b4b5bb');
+  X.beginPath(); X.moveTo(880, 636); X.lineTo(1040, 636); X.lineTo(1030, 642); X.lineTo(890, 642); X.fillStyle = '#a5a6ac'; X.fill();
+  X.fillStyle = 'rgba(0,0,0,.08)'; for (let r = 0; r < 4; r++) { const y = 580 + r * 11, ins = 54 - r * 13; X.fillRect(640 + ins - 20, y, 640 - 2 * ins + 40, 6); }
+  // screen glare
+  X.save(); rr(...PORT[0], 4); X.clip(); X.restore();
+};
+L[0].glare = (p) => { // drawn above child
+  const [x, y, w, h] = PORT[0]; X.save(); rr(x, y, w, h, 2); X.clip(); X.globalAlpha = .18 * p;
+  X.fillStyle = grad(x, y, x + w, y + h, ['rgba(255,255,255,.9)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)']); X.fillRect(x, y, w, h); X.restore();
+};
+
+// ---- L1: AIMY chat app ----
+L[1] = (t, d) => {
+  X.fillStyle = '#ffffff'; X.fillRect(0, 0, W, H);
+  // sidebar
+  X.fillStyle = '#f6f5f8'; X.fillRect(0, 0, 360, H); X.fillStyle = '#ecebef'; X.fillRect(359, 0, 1, H);
+  fillRR(28, 200, 304, 54, 14, '#fff'); txt('+  New chat', 52, 236, 21, 700, '#15131a');
+  txt('CHATS', 40, 300, 15, 800, '#a39cae');
+  [['VYRA launch', 1], ['Spring promo', 0], ['Weekly plan', 0]].forEach(([s, a], i) => { if (a) fillRR(28, 318 + i * 56, 304, 48, 12, '#ebe7f5'); txt(s, 52, 350 + i * 56, 20, a ? 800 : 600, a ? '#15131a' : '#6b6475'); });
+  txt('YOUR TEAM', 40, 540, 15, 800, '#a39cae');
+  [['01', 'Project Manager'], ['13', 'Logo'], ['14', 'Brand Kit'], ['15', 'Portrait'], ['17', 'Website'], ['42', 'Ads']].forEach(([n, s], i) => { avatar(62, 580 + i * 52, 18, n); txt(s, 92, 587 + i * 52, 19, 600, '#3d3846'); });
+  txt('+ 46 more employees', 40, 910, 17, 700, '#8a8494');
+  // header
+  X.fillStyle = '#fff'; X.fillRect(360, 0, W - 360, 104); X.fillStyle = '#eee'; X.fillRect(360, 104, W - 360, 1);
+  const lg = IMG['aimy-logo-dark.png']; if (lg.naturalWidth) X.drawImage(lg, 400, 22, 86, 60.6);
+  txt('VYRA launch', 510, 50, 26, 800); X.beginPath(); X.arc(518, 76, 5, 0, 7); X.fillStyle = '#22c55e'; X.fill(); txt('52 AI employees in this chat', 530, 82, 18, 600, '#8a8494');
+  // conversation (times relative to EV)
+  const tU = EV.send ?? 2.6, tR = EV.reply ?? 5.2, tCard = EV.card ?? 6.8;
+  const typed = 'Launch my home-fitness brand, VYRA.';
+  const nT = Math.floor(cl((t - (tU - 1.6)) / 1.4) * typed.length);
+  // user bubble
+  const ua = pop(t, tU, .5);
+  if (ua > 0) { const bw = tw(typed, 26, 700) + 56; X.save(); X.globalAlpha = cl(ua); X.translate(1720 - bw, 160 + (1 - cl(ua)) * 30); shadowed(() => fillRR(0, 0, bw, 64, 26, '#FF6A3D'), 20, 8, 'rgba(255,60,90,.25)'); fillRR(0, 0, bw, 64, 26, GR(0, 0, bw)); txt(typed, 28, 41, 26, 700, '#fff'); X.restore(); }
+  // PM reply
+  const ra = cl((t - tR) / .4);
+  if (ra > 0) {
+    X.save(); X.globalAlpha = ra; X.translate(0, (1 - eout(ra)) * 24);
+    avatar(712, 290, 30, '01'); txt('Project Manager', 760, 276, 19, 800, '#6b6475');
+    const msg = 'On it. 52 AI employees, in a fixed order. Here is the plan.';
+    const nm = Math.floor(cl((t - tR) / 1.2) * msg.length);
+    const mw = tw(msg, 25, 600) + 48; fillRR(760, 292, mw, 64, 20, '#f3f1f6'); txt(msg.slice(0, nm), 784, 333, 25, 600);
+    X.restore();
+  }
+  // plan artifact card frame around the portal
+  const ca = cl((t - tCard) / .5);
+  if (ca > 0) { const [x, y, w, h] = PORT[1]; X.save(); X.globalAlpha = ca; card(x - 10, y - 10, w + 20, h + 64, 22, '#fff'); txt('THE PLAN · VYRA launch', x + 4, y + h + 40, 18, 800, '#6b6475'); txt('Open  →', x + w - 4, y + h + 40, 18, 800, '#FF4B61', 'right'); X.restore(); }
+  // composer
+  fillRR(560, 960, 1180, 76, 38, '#f3f1f6');
+  if (t < tU) txt(nT > 0 ? typed.slice(0, nT) + (Math.floor(t * 3) % 2 ? '|' : '') : 'Message your team…', 600, 1007, 24, 600, nT > 0 ? '#15131a' : '#9a94a3');
+  else txt('Message your team…', 600, 1007, 24, 600, '#9a94a3');
+  X.beginPath(); X.arc(1700, 998, 26, 0, 7); X.fillStyle = GR(1674, 0, 52); X.fill(); txt('↑', 1700, 1000, 28, 800, '#fff', 'center', 'middle');
+  ring(1700, 998, 50, (t - tU + .05) / .5);
+};
+L[1].childVisible = (t) => cl((t - (EV.card ?? 6.8)) / .5);
+
+// ---- L2: Project Manager plan ----
+const PLAN = [['01', 'Project Manager'], ['02', 'Counseling'], ['05', 'Market Analysis'], ['11', 'Knowledge'], ['12', 'Funnel'], ['13', 'Logo'], ['14', 'Brand Kit'], ['15', 'Portrait'], ['17', 'Website'], ['21', 'YouTube'], ['23', 'Thumbnail'], ['24–29', 'X · Instagram · TikTok · Facebook'], ['35', 'SNS Cover'], ['42', 'Ads']];
+L[2] = (t, d) => {
+  studioBg('rgba(255,176,0,.30)', 'rgba(192,76,240,.20)');
+  const x = 180, y = 200, w = 800, h = 840;
+  card(x, y, w, h, 28);
+  tag('01 · PROJECT MANAGER', x + 44, y + 62, 18);
+  txt('VYRA launch plan', x + 44, y + 118, 44, 800);
+  txt('Every employee, in a fixed order.', x + 44, y + 156, 21, 600, '#8a8494');
+  const t0 = (EV.planRows ?? ARR[2] + .1);
+  PLAN.forEach(([n, s], i) => {
+    const ry = y + 190 + i * 42, hl = n === '13';
+    const ra = cl((t - (t0 + i * .09)) / .3);
+    X.save(); X.globalAlpha = .25 + .75 * ra;
+    if (hl) { fillRR(x + 26, ry - 4, w - 52, 46, 12, 'rgba(255,75,97,.10)'); }
+    txt(n, x + 44, ry + 28, 19, 800, hl ? '#FF4B61' : '#a39cae'); txt(s, x + 150, ry + 28, 22, hl ? 800 : 600, '#15131a');
+    check(x + w - 60, ry + 20, 13, ss((t - (t0 + .25 + i * .09)) / .25));
+    X.restore();
+  });
+  txt('…and the rest of the 52, in order', x + 44, y + 190 + 14 * 42 + 26, 19, 600, '#a39cae');
+  // connector from the Logo row to the preview tile
+  const [px, py, pw, ph] = PORT[2]; const ry = y + 190 + 5 * 42 + 20;
+  const cpa = ss((t - (t0 + 1.0)) / .5);
+  X.save(); X.strokeStyle = '#FF4B61'; X.lineWidth = 3; X.setLineDash([8, 8]); X.globalAlpha = cpa; X.beginPath(); X.moveTo(x + w - 30, ry); X.bezierCurveTo(x + w + 60, ry, px - 80, py + ph / 2, px - 10, py + ph / 2); X.stroke(); X.restore();
+  X.save(); X.globalAlpha = cpa; card(px - 12, py - 70, pw + 24, ph + 82, 24); tag('13 · LOGO', px + 6, py - 32, 18); txt('drawing nine ideas…', px + 140, py - 32, 19, 600, '#8a8494'); X.restore();
+};
+L[2].childVisible = (t) => ss((t - ((EV.planRows ?? ARR[2] + .1) + 1.0)) / .5);
+
+// ---- L3: Logo — nine ideas, you pick one ----
+L[3] = (t, d) => {
+  X.fillStyle = '#fbfaf8'; X.fillRect(0, 0, W, H); X.fillStyle = dots(); X.fillRect(0, 0, W, H);
+  const t0 = EV.logoDraw ?? ARR[3] - .9, tPick = EV.pick ?? ARR[3] + 2.4;
+  for (let i = 0; i < 9; i++) {
+    const c = i % 3, r = Math.floor(i / 3), x = 330 + c * 430, y = 212.5 + r * 255;
+    const a = pop(t, t0 + [4, 1, 5, 2, 0, 6, 7, 3, 8][i] * .24, .5);
+    if (a <= 0) continue;
+    if (i === 4) { X.save(); X.globalAlpha = cl(a * 2); card(x, y, 400, 225, 18); X.restore(); continue; } // centre = portal (child level)
+    const dim = 1 - .45 * ss((t - tPick) / .4);
+    X.save(); X.translate(x + 200, y + 112.5); X.scale(a, a); X.globalAlpha = dim * cl(a * 2); card(-200, -112.5, 400, 225, 18);
+    imgFit(IMG['logo-sheet-nine-en.png'], -170, -70, 340, 140, LC(i)); X.restore();
+  }
+  // picked frame around the centre (portal)
+  const [px, py, pw, ph] = PORT[3];
+  const pk = ss((t - tPick) / .35);
+  if (pk > 0) { X.save(); X.globalAlpha = pk; rr(px - 8, py - 8, pw + 16, ph + 16, 24); X.strokeStyle = GR(px, 0, pw); X.lineWidth = 6; X.stroke(); X.restore(); badge(px + pw - 120, py - 26, 'Picked ✓', '#22c55e', '#fff', 18 * pk || .01); }
+  ring(px + pw / 2, py + ph / 2, 240, (t - tPick) / .6);
+  // cursor travels to the centre and clicks
+  const ca = cl((t - (tPick - 1.0)) / .3) * (1 - cl((t - tPick - .8) / .3));
+  const cp = eio((t - (tPick - 1.0)) / .9);
+  cursor(lerp(1500, px + pw / 2 + 30, cp), lerp(900, py + ph / 2 + 30, cp), cl(1 - Math.abs(t - tPick) / .12), ca);
+};
+// shadow under the centre card even before it is the picked one
+L[3].childVisible = (t) => cl(pop(t, EV.logoDraw ?? ARR[3] - .9, .5) * 2);
+
+// ---- L4: Brand Kit (arrives as the picked logo on white) ----
+L[4] = (t, d) => {
+  const u = settle(4, t, d, 1.2);
+  X.fillStyle = '#fff'; X.fillRect(0, 0, W, H);
+  X.save(); X.globalAlpha = u; studioBg('rgba(255,138,31,.20)', 'rgba(255,45,186,.16)', .1, .15, .9, .9); X.restore();
+  const vl = IMG['vyra-logo-en.png'];
+  // logo: from centred (matches the picked card) → board header
+  const s0 = 1488 / 1548, s1 = 380 / 1548;
+  const lx = lerp(960, 120 + 190 + 30, eio(u)), ly = lerp(540, 250, eio(u)), s = lerp(s0, s1, eio(u));
+  // board card
+  const ba = ss((u - .35) / .5);
+  if (ba > 0) { X.save(); X.globalAlpha = ba; card(110, 130, 1700, 920, 30); X.restore(); }
+  if (vl.naturalWidth) X.drawImage(vl, 60, 1, 1548, 470, lx - 774 * s, ly - 235 * s, 1548 * s, 470 * s);
+  if (ba <= 0) return;
+  X.save(); X.globalAlpha = ba;
+  tag('14 · BRAND KIT', 150, 200, 18); txt('Move at Home. Fit into Your Life.', 150, 370, 30, 800, '#15131a', 'left', 'alphabetic', 'italic ');
+  // colours
+  const cols = [['#FF8A1F', 'Sunrise'], ['#FF2DBA', 'Pulse'], ['#7B3FF2', 'Violet'], ['#15131a', 'Ink'], ['#F4F1EC', 'Chalk']];
+  txt('COLORS', 150, 440, 15, 800, '#a39cae');
+  cols.forEach(([c, n], i) => { const a = pop(t, ARR[4] + .7 + i * .08, .4); X.save(); X.translate(150 + i * 118 + 50, 520); X.scale(a, a); shadowed(() => fillRR(-50, -50, 100, 100, 18, c), 14, 6, 'rgba(0,0,0,.12)'); X.restore(); txt(n, 150 + i * 118 + 50, 600, 16, 700, '#6b6475', 'center'); txt(c, 150 + i * 118 + 50, 622, 13, 600, '#a39cae', 'center'); });
+  // type
+  txt('TYPE', 150, 680, 15, 800, '#a39cae');
+  txt('Aa', 150, 790, 100, 800); txt('Move First.', 330, 745, 40, 800, '#15131a', 'left', 'alphabetic', 'italic '); txt('Feel Strong.', 330, 795, 40, 800, '#15131a', 'left', 'alphabetic', 'italic ');
+  // buttons
+  fillRR(150, 850, 300, 64, 32, GR(150, 0, 300)); txt('Start Now  →', 300, 891, 22, 800, '#fff', 'center');
+  fillRR(470, 850, 230, 64, 32, '#15131a'); txt('Join free', 585, 891, 22, 800, '#fff', 'center');
+  txt('Gradient · Sunrise → Pulse', 150, 960, 16, 700, '#8a8494'); fillRR(150, 975, 550, 20, 10, grad(150, 0, 700, 0, ['#FFB000', '#FF4B61', '#FF2DBA', '#7B3FF2']));
+  // imagery
+  txt('IMAGERY', 800, 200, 15, 800, '#a39cae');
+  const ims = [['girl-pose-1.jpg', 800, 220, 220, 300], ['girl-pose-2.jpg', 1036, 220, 220, 300], ['girl-pose-4.jpg', 1272, 220, 220, 300], ['brand-hero-en.jpg', 1508, 220, 262, 300]];
+  ims.forEach(([n, x, y, w, h], i) => { const a = pop(t, ARR[4] + .9 + i * .1, .45); X.save(); X.translate(x + w / 2, y + h / 2); X.scale(a, a); imgRR(IMG[n], -w / 2, -h / 2, w, h, 16, .5, .25); X.restore(); });
+  txt('PORTRAIT', 800, 568, 15, 800, '#a39cae');
+  imgRR(IMG['07-model-photo-1.jpg'], 800, 588 - 40 + 40, 350, 306, 16, .5, .3);
+  txt('Studio portrait for every channel', 800, 930, 18, 700, '#6b6475');
+  X.restore();
+  // portal frame (portrait tile)
+  const [px, py, pw, ph] = PORT[4]; X.save(); X.globalAlpha = ba; card(px - 8, py - 8, pw + 16, ph + 16, 20); tag('15 · PORTRAIT', px, py + ph + 44, 16); X.restore();
+};
+L[4].childVisible = (t, d) => ss((settle(4, t, d, 1.2) - .35) / .5);
+
+// ---- L5: Portrait — selfie in, studio portrait out (arrives as the portrait) ----
+L[5] = (t, d) => {
+  const u = eio(settle(5, t, d, 1.2));
+  studioBg('rgba(255,176,0,.22)', 'rgba(109,93,252,.18)');
+  // selfie card
+  const sa = ss((u - .4) / .5);
+  if (sa > 0) {
+    X.save(); X.globalAlpha = sa; X.translate((1 - sa) * -60, 0);
+    card(150, 220, 420, 560, 26); imgRR(IMG['01-original-photo.jpg'], 166, 236, 388, 528, 18, .5, .35);
+    badge(180, 250, 'Selfie', '#15131a', '#fff', 18); txt('Your photo, from your phone', 150, 830, 20, 700, '#6b6475');
+    X.restore();
+    // arrow
+    X.save(); X.globalAlpha = sa; X.strokeStyle = '#FF4B61'; X.lineWidth = 6; X.lineCap = 'round'; X.beginPath(); X.moveTo(600, 500); X.lineTo(690, 500); X.moveTo(668, 478); X.lineTo(692, 500); X.lineTo(668, 522); X.stroke(); X.restore();
+  }
+  // portrait: full frame → card
+  const r = lr([0, 0, W, H], [720, 170, 520, 660], u);
+  if (u > .02) card(r[0] - 16 * u, r[1] - 16 * u, r[2] + 32 * u, r[3] + 32 * u, 30 * u);
+  imgRR(IMG['02-portrait.jpg'], r[0], r[1], r[2], r[3], 22 * u, .5, lerp(.3, .25, u));
+  if (u > .5) { X.save(); X.globalAlpha = ss((u - .5) / .4); badge(r[0] + 20, r[1] + 20, 'Studio portrait', GR(r[0], 0, 200), '#fff', 18); txt('Same face. Studio light.', 720, 890, 20, 700, '#6b6475'); X.restore(); }
+  // website card
+  const wa = ss((u - .6) / .4);
+  if (wa > 0) { const [px, py, pw, ph] = PORT[5]; X.save(); X.globalAlpha = wa; card(px - 10, py - 54, pw + 20, ph + 64, 20); fillRR(px - 10, py - 54, pw + 20, 44, 0, '#f3f1f6');
+    [0, 1, 2].forEach(i => { X.beginPath(); X.arc(px + 12 + i * 18, py - 32, 6, 0, 7); X.fillStyle = ['#ff5f57', '#febc2e', '#28c840'][i]; X.fill(); });
+    fillRR(px + 80, py - 44, 220, 24, 12, '#fff'); txt('vyra.fit', px + 96, py - 26, 15, 700, '#6b6475');
+    tag('17 · WEBSITE', px, py + ph + 46, 16); X.restore(); }
+};
+L[5].childVisible = (t, d) => ss((eio(settle(5, t, d, 1.2)) - .6) / .4);
+
+// ---- L6: Website (arrives as the landing page hero) ----
+L[6] = (t, d) => {
+  const u = eio(settle(6, t, d, 1.6, .5));
+  X.fillStyle = '#fff'; X.fillRect(0, 0, W, H);
+  const sy = -u * 960; // scroll
+  X.save(); X.translate(0, sy);
+  const hi = IMG['website-hero-en.jpg']; imgCover(hi, 0, 64, W, 1016, .5, .5);
+  // features
+  X.fillStyle = '#faf7f4'; X.fillRect(0, 1080, W, 1100);
+  tag('WHY VYRA', 160, 1170, 20); txt('15 minutes. Anywhere. Built for busy days.', 160, 1240, 46, 800);
+  // YouTube embed section (portal sits at 560,300 after scroll of 960 → page y 1260)
+  const [px, py, pw, ph] = PORT[6];
+  card(px - 14, py + 960 - 14, pw + 28, ph + 28, 22);
+  txt('Watch on YouTube', 160, 1340, 26, 800); txt('Your first routine,', 160, 1400, 38, 800); txt('step by step.', 160, 1446, 38, 800);
+  fillRR(160, 1490, 250, 58, 29, GR(160, 0, 250)); txt('Start Now  →', 285, 1527, 20, 800, '#fff', 'center');
+  [['girl-pose-3.jpg', '15-minute routines'], ['girl-pose-4.jpg', 'Train anywhere']].forEach(([n, s], i) => { const y = 1290 + i * 230; imgRR(IMG[n], 1420, y, 340, 190, 16, .5, .3); txt(s, 1420, y + 220, 18, 700, '#6b6475'); });
+  X.restore();
+  // browser chrome (fixed)
+  X.fillStyle = '#f3f1f6'; X.fillRect(0, 0, W, 64); X.fillStyle = '#e6e3ea'; X.fillRect(0, 64, W, 1);
+  [0, 1, 2].forEach(i => { X.beginPath(); X.arc(36 + i * 28, 32, 9, 0, 7); X.fillStyle = ['#ff5f57', '#febc2e', '#28c840'][i]; X.fill(); });
+  fillRR(760, 14, 400, 36, 18, '#fff'); txt('vyra.fit', 960, 38, 18, 700, '#6b6475', 'center');
+};
+L[6].childVisible = (t, d) => 1;
+L[6].portalY = (t, d) => (1 - eio(settle(6, t, d, 1.6, .5))) * 960; // portal moves with scroll
+
+// ---- L7: YouTube + Thumbnail (arrives as the player) ----
+L[7] = (t, d) => {
+  const u = eio(settle(7, t, d, 1.2));
+  studioBg('rgba(255,0,51,.10)', 'rgba(255,176,0,.20)');
+  const r = lr([0, 0, W, H], [120, 190, 1060, 596], u);
+  // right column
+  const ca = ss((u - .45) / .5);
+  if (ca > 0) {
+    X.save(); X.globalAlpha = ca; X.translate((1 - ca) * 60, 0);
+    txt('Up next', 1300, 220, 22, 800);
+    [['thumb-en-1.jpg', 'Move First. Feel Strong.'], ['thumb-en-3.jpg', 'Busy Routine? Reset in 15.']].forEach(([n, s], i) => { const y = 245 + i * 200; imgRR(IMG[n], 1300, y, 300, 169, 12); txt(s, 1620, y + 40, 19, 800); txt('VYRA', 1620, y + 70, 16, 600, '#8a8494'); badge(1300 + 240, y + 135, '15:02', 'rgba(0,0,0,.75)', '#fff', 13); });
+    txt('Community', 1300, 670, 22, 800); tag('24–29 · SOCIAL', 1460, 670, 15);
+    const [px, py, pw, ph] = PORT[7]; card(px - 8, py - 8, pw + 16, ph + 16, 18);
+    X.restore();
+    X.save(); X.globalAlpha = ca;
+    txt('Move at Home. Fit into Your Life. | 15-Minute Routine', 120, 840, 28, 800);
+    avatar(150, 900, 26, ''); const vl = IMG['vyra-logo-en.png']; if (vl.naturalWidth) X.drawImage(vl, 60, 1, 1548, 470, 132, 893, 40, 12);
+    txt('VYRA', 190, 896, 21, 800); txt('Home fitness', 190, 920, 16, 600, '#8a8494');
+    fillRR(370, 878, 150, 46, 23, '#15131a'); txt('Subscribe', 445, 908, 18, 800, '#fff', 'center');
+    tag('21 · YOUTUBE   23 · THUMBNAIL', 120, 990, 16);
+    X.restore();
+  }
+  // player
+  if (u > .02) card(r[0], r[1], r[2], r[3], 22 * u);
+  imgRR(IMG['thumb-en-2.jpg'], r[0], r[1], r[2], r[3], 22 * u);
+  const pr = lerp(1, .55, u), cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+  fillRR(cx - 70 * pr, cy - 48 * pr, 140 * pr, 96 * pr, 26 * pr, '#ff0033'); X.beginPath(); X.moveTo(cx - 18 * pr, cy - 26 * pr); X.lineTo(cx + 30 * pr, cy); X.lineTo(cx - 18 * pr, cy + 26 * pr); X.fillStyle = '#fff'; X.fill();
+  // progress bar
+  X.fillStyle = 'rgba(255,255,255,.5)'; X.fillRect(r[0], r[1] + r[3] - 8 * pr, r[2], 6 * pr); X.fillStyle = '#ff0033'; X.fillRect(r[0], r[1] + r[3] - 8 * pr, r[2] * cl((t - ARR[7]) / 30), 6 * pr);
+};
+L[7].childVisible = (t, d) => ss((eio(settle(7, t, d, 1.2)) - .45) / .5);
+
+// ---- L8: posts for every app ----
+function postHead(x, y, net, handle = '@vyra_fit', col = '#15131a') {
+  X.beginPath(); X.arc(x + 24, y + 24, 24, 0, 7); X.fillStyle = '#15131a'; X.fill();
+  const vl = IMG['vyra-logo-en.png']; if (vl.naturalWidth) X.drawImage(vl, 60, 1, 1548, 470, x + 6, y + 18, 36, 11);
+  txt('VYRA', x + 60, y + 20, 19, 800); txt(handle + ' · ' + net, x + 60, y + 44, 15, 600, '#8a8494');
+}
+function postBadge(x, y, t0, t) { const a = pop(t, t0, .4); if (a <= 0) return; X.save(); X.translate(x, y); X.scale(a, a); badge(-60, -18, 'Drafted ✓', '#22c55e', '#fff', 15); X.restore(); }
+L[8] = (t, d) => {
+  studioBg('rgba(255,138,31,.18)', 'rgba(123,63,242,.16)');
+  const b0 = ARR[8] + .3;
+  // TikTok phone
+  card(150, 190, 360, 660, 40, '#0f0e12'); imgRR(IMG['tiktok-en-squat.jpg'], 162, 202, 336, 636, 30, .5, .5);
+  X.save(); X.globalAlpha = .9; txt('@vyra_fit', 186, 760, 18, 800, '#fff'); txt('15 minutes, no gym. #VYRA', 186, 788, 16, 600, '#fff'); X.restore();
+  txt('TikTok · Short Video', 150, 890, 19, 800, '#6b6475'); postBadge(470, 186, b0 + .1, t);
+  // X post
+  card(550, 190, 530, 270, 22); postHead(574, 212, 'X');
+  wrap('Fitness that fits your workday. 15 minutes at home, no gym needed. Start your habit today.', 574, 300, 480, 22, 32, 600);
+  txt('♡ Like   ↻ Repost   ↗ Share', 574, 430, 16, 700, '#a39cae'); postBadge(1040, 186, b0 + .25, t);
+  // Threads
+  card(550, 490, 530, 190, 22); postHead(574, 512, 'Threads');
+  wrap('Lighter. Stronger. 15 minutes a day with VYRA.', 574, 600, 480, 22, 32, 600); postBadge(1040, 486, b0 + .4, t);
+  // Facebook
+  card(550, 710, 530, 330, 22); postHead(574, 732, 'Facebook');
+  txt('Move First. Feel Strong.', 574, 822, 21, 700); imgRR(IMG['brand-hero-en.jpg'], 574, 840, 482, 180, 12, .5, .3); postBadge(1040, 706, b0 + .55, t);
+  // Instagram
+  card(1120, 190, 640, 420, 22); postHead(1144, 212, 'Instagram');
+  imgRR(IMG['ad-en-vyra-girl.jpg'], 1144, 280, 300, 300, 12); wrap('Move at Home. Fit into Your Life. Your 15-minute routine starts today.', 1464, 320, 270, 21, 31, 600);
+  txt('♡  ◯  ➤', 1464, 570, 22, 700, '#6b6475'); postBadge(1720, 186, b0 + .7, t);
+  // X profile card (portal) frame
+  const [px, py, pw, ph] = PORT[8]; card(px - 8, py - 8, pw + 16, ph + 16, 20);
+};
+L[8].childVisible = () => 1;
+
+// ---- L9: SNS Cover (arrives as the X profile header) ----
+function profile(x, y, w, h, cover) { // 16:9 profile page drawn into rect
+  const s = w / W; X.save(); X.translate(x, y); X.scale(s, s);
+  X.fillStyle = '#fff'; X.fillRect(0, 0, W, H);
+  imgCover(IMG[cover], 0, 0, W, 525, .5, .5);
+  X.beginPath(); X.arc(230, 560, 140, 0, 7); X.fillStyle = '#fff'; X.fill(); X.beginPath(); X.arc(230, 560, 128, 0, 7); X.fillStyle = '#15131a'; X.fill();
+  const vl = IMG['vyra-logo-en.png']; if (vl.naturalWidth) X.drawImage(vl, 60, 1, 1548, 470, 140, 533, 180, 55);
+  txt('VYRA', 100, 780, 60, 800); txt('@vyra_fit', 100, 830, 32, 600, '#8a8494');
+  txt('Move at Home. Fit into Your Life. 15-minute home workouts.', 100, 900, 34, 600);
+  fillRR(1560, 560, 260, 80, 40, '#15131a'); txt('Follow', 1690, 612, 32, 800, '#fff', 'center');
+  ['Posts', 'Replies', 'Media', 'Likes'].forEach((s, i) => txt(s, 100 + i * 260, 1010, 32, i ? 600 : 800, i ? '#8a8494' : '#15131a'));
+  X.fillStyle = '#FF4B61'; X.fillRect(100, 1030, 90, 8);
+  X.restore();
+}
+L[9] = (t, d) => {
+  const u = eio(settle(9, t, d, 1.2));
+  studioBg('rgba(255,45,186,.14)', 'rgba(255,176,0,.22)');
+  const r = lr([0, 0, W, H], [120, 230, 576, 324], u);
+  const ca = ss((u - .45) / .5);
+  if (ca > 0) {
+    X.save(); X.globalAlpha = ca;
+    txt('X profile', 120, 214, 20, 800, '#6b6475');
+    const covers = [['girl-cover-1.png', 'X header'], ['cover-en-fitness-1.jpg', 'YouTube banner'], ['cover-en-move-your-city.jpg', 'Facebook cover']];
+    covers.forEach(([n, s], i) => { const y = 190 + i * 285, a = pop(t, ARR[9] + .8 + i * .15, .45); X.save(); X.translate((1 - cl(a)) * 80, 0); card(800, y, 980, 250, 18); imgRR(IMG[n], 812, y + 12, 956, 226 - 0, 12); badge(830, y + 30, s, 'rgba(21,19,26,.82)', '#fff', 16); X.restore(); });
+    const [px, py, pw, ph] = PORT[9]; card(px - 8, py - 8, pw + 16, ph + 16, 20);
+    X.restore();
+  }
+  if (u > .02) card(r[0] - 8 * u, r[1] - 8 * u, r[2] + 16 * u, r[3] + 16 * u, 20 * u);
+  profile(r[0], r[1], r[2], r[3], 'girl-cover-1.png');
+};
+L[9].childVisible = (t, d) => ss((eio(settle(9, t, d, 1.2)) - .45) / .5);
+
+// ---- L10: Ads — campaign draft, nothing spends until you approve ----
+L[10] = (t, d) => {
+  studioBg('rgba(255,138,31,.20)', 'rgba(255,45,186,.16)');
+  X.translate(0, 30); const tA = EV.approve ?? ARR[10] + 5;
+  imgRR(IMG['ad-en-vyra-girl.jpg'], 150, 170, 440, 440, 20); imgRR(IMG['ad-en-busy-routine.jpg'], 620, 170, 440, 440, 20);
+  shadowed(() => { rr(150, 170, 440, 440, 20); X.fillStyle = 'rgba(0,0,0,0)'; X.fill(); });
+  card(150, 650, 910, 260, 20); imgRR(IMG['banner-en.jpg'], 162, 662, 886, 226, 12);
+  txt('Feed · Story · Banner — drafted by 42 · Ads', 150, 960, 20, 700, '#6b6475');
+  // campaign panel
+  card(1120, 170, 650, 740, 28);
+  tag('42 · ADS', 1170, 236, 18); txt('Campaign draft', 1170, 296, 44, 800);
+  const ok = ss((t - tA) / .3);
+  // status pill
+  fillRR(1170, 330, 520, 56, 28, ok > .5 ? 'rgba(34,197,94,.14)' : 'rgba(255,176,0,.18)');
+  X.beginPath(); X.arc(1200, 358, 8, 0, 7); X.fillStyle = ok > .5 ? '#22c55e' : '#f59e0b'; X.fill();
+  txt(ok > .5 ? 'Approved by you' : 'Paused — nothing spends yet', 1222, 366, 21, 800, ok > .5 ? '#15803d' : '#b45309');
+  [['Audience', 'Busy professionals, home fitness'], ['Placements', 'Instagram · Facebook'], ['Creatives', '3 ads ready'], ['Budget', 'Set by you']].forEach(([k, v], i) => {
+    const y = 450 + i * 74; X.fillStyle = '#f0edf3'; X.fillRect(1170, y + 28, 550, 1); txt(k, 1170, y, 18, 700, '#8a8494'); txt(v, 1720, y, 21, 800, '#15131a', 'right');
+  });
+  // approve button
+  const bx = 1170, by = 780, bw = 340, bh = 76, press = cl(1 - Math.abs(t - tA) / .12);
+  X.save(); X.translate(bx + bw / 2, by + bh / 2); X.scale(1 - press * .05, 1 - press * .05);
+  fillRR(-bw / 2, -bh / 2, bw, bh, 38, ok > .5 ? '#22c55e' : GR(-bw / 2, 0, bw)); txt(ok > .5 ? 'Approved ✓' : 'Approve', 0, 2, 26, 800, '#fff', 'center', 'middle'); X.restore();
+  fillRR(1530, 780, 190, 76, 38, '#f3f1f6'); txt('Edit', 1625, 827, 24, 800, '#15131a', 'center');
+  ring(bx + bw / 2, by + bh / 2, 160, (t - tA) / .6, '#22c55e');
+  // cursor
+  const ca = cl((t - (tA - 1.3)) / .3) * (1 - cl((t - tA - .9) / .3)), cp = eio((t - (tA - 1.3)) / 1.15);
+  cursor(lerp(1000, bx + bw / 2 + 20, cp), lerp(1000, by + bh / 2 + 10, cp), press, ca);
+};
+
+// ================= camera + nesting =================
+function drawLevel(k, t, d, depthAlpha = 1) {
+  X.save(); L[k](t, d); X.restore();
+}
+function portalOf(k, t, d) { const p = PORT[k].slice(); if (L[k].portalY) p[1] += L[k].portalY(t, d); return p; }
+function render(t) {
+  const d = depthC(t);
+  const k = Math.min(10, Math.floor(d + 1e-9)), f = d - k;
+  X.setTransform(1, 0, 0, 1, 0, 0); X.fillStyle = '#faf7f4'; X.fillRect(0, 0, W, H);
+  // transform of level k on screen
+  let [px, py, pw] = portalOf(Math.min(k, 9), t, d); let s = pw / W;
+  let Z = 1, ox = 0, oy = 0;
+  if (k < 10 && f > 0) { Z = Math.pow(1 / s, f); const fx = px / (1 - s), fy = py / (1 - s); ox = fx * (1 - Z); oy = fy * (1 - Z); }
+  // draw level k, then descendants inside nested portal clips
+  let M = [Z, ox, oy], Mprev = M;
+  X.save(); X.setTransform(Z, 0, 0, Z, ox, oy); X.save(); L[k](t, d); X.restore();
+  for (let j = k + 1; j <= Math.min(10, k + 3); j++) {
+    const [qx, qy, qw, qh] = portalOf(j - 1, t, d);
+    Mprev = M; M = [M[0] * qw / W, M[1] + M[0] * qx, M[2] + M[0] * qy];
+    if (qw * Mprev[0] < 3) break;
+    const vis = L[j - 1].childVisible ? L[j - 1].childVisible(t, d) : 1; if (vis <= 0) break;
+    X.setTransform(Mprev[0], 0, 0, Mprev[0], Mprev[1], Mprev[2]);
+    const ff = j === k + 1 ? f : 0; rr(qx, qy, qw, qh, (j - 1 === 0 ? 3 : 14) * (1 - ss(ff * 1.15))); X.clip();
+    X.setTransform(M[0], 0, 0, M[0], M[1], M[2]); X.save(); X.globalAlpha = vis; L[j](t, d); X.restore();
+    if (j - 1 === 0) { X.setTransform(Mprev[0], 0, 0, Mprev[0], Mprev[1], Mprev[2]); L[0].glare(1 - f); }
+  }
+  X.restore();
+  // dive speed: soft white edge glow
+  const sp = Math.min(1, Math.abs(depthC(t + .02) - depthC(t - .02)) / .04 / 1.6);
+  if (sp > .01) { X.setTransform(1, 0, 0, 1, 0, 0); const g = X.createRadialGradient(960, 540, 300, 960, 540, 1150); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(255,255,255,${.55 * sp})`); X.fillStyle = g; X.fillRect(0, 0, W, H); }
+  overlay(t, d);
+}
+
+// ================= screen-space overlay: caption + depth gauge =================
+const CAPS = T.CAPS || [
+  { t0: .9, t1: 3.4, tag: 'AIMY', title: 'Start at your desk.', sub: 'Open one chat.' },
+  { t0: 4.6, t1: 10.2, tag: 'ONE CHAT', title: 'A company of AI employees.', sub: '52 of them, working in a fixed order.' },
+  { t0: 11.5, t1: 14.9, tag: '01 · PROJECT MANAGER', title: 'Plans the whole launch.', sub: 'Every employee, in order.' },
+  { t0: 16.3, t1: 19.6, tag: '13 · LOGO', title: 'Nine ideas.', sub: 'You pick one.' },
+  { t0: 21.1, t1: 23.1, tag: '14 · BRAND KIT', title: 'The full look.', sub: 'Logo, colors, type and photos.' },
+  { t0: 23.6, t1: 26.0, tag: '15 · PORTRAIT', title: 'Selfie in.', sub: 'Studio portrait out.' },
+  { t0: 26.5, t1: 28.4, tag: '17 · WEBSITE', title: 'The landing page.', sub: 'Built in the same chat.' },
+  { t0: 29.8, t1: 32.2, tag: '21 · 23 · YOUTUBE + THUMBNAIL', title: 'The channel.', sub: 'Video pages and thumbnails.' },
+  { t0: 32.6, t1: 35.6, tag: '24–29 · SOCIAL', title: 'Posts for every app.', sub: 'X, Instagram, TikTok, Threads, Facebook.' },
+  { t0: 36.1, t1: 38.3, tag: '35 · SNS COVER', title: 'Every profile, dressed.', sub: 'A cover for each channel.' },
+  { t0: 38.8, t1: 43.2, tag: '42 · ADS', title: 'The campaign.', sub: 'Nothing spends until you approve.' },
+  { t0: 43.6, t1: 46.3, tag: 'EVERY LEVEL', title: 'Built on the one before.', sub: '' },
+];
+const GAUGE = ['Desk', 'Chat', '01 Plan', '13 Logo', '14 Brand Kit', '15 Portrait', '17 Website', '21·23 YouTube', '24–29 Posts', '35 SNS Cover', '42 Ads'];
+function overlay(t, d) {
+  X.setTransform(1, 0, 0, 1, 0, 0);
+  // caption
+  for (const c of CAPS) {
+    const a = ss((t - c.t0) / .35) * (1 - ss((t - c.t1) / .3)); if (a <= 0) continue;
+    X.save(); X.globalAlpha = a; X.translate(0, (1 - eout(cl((t - c.t0) / .4))) * 16);
+    X.font = `800 50px ${F}`; let w = X.measureText(c.title).width; X.font = `600 22px ${F}`; w = Math.max(w, X.measureText(c.sub || '').width, tw(c.tag, 17, 800) * 1.25) + 64;
+    X.save(); X.shadowColor = 'rgba(60,30,70,.14)'; X.shadowBlur = 30; X.shadowOffsetY = 10; fillRR(36, 36, w, c.sub ? 148 : 118, 22, 'rgba(255,255,255,.95)'); X.restore();
+    tag(c.tag, 68, 80, 17); txt(c.title, 66, 134, 50, 800); if (c.sub) txt(c.sub, 68, 168, 22, 600, '#6b6475');
+    X.restore();
+  }
+  // depth gauge (right edge)
+  const ga = (1 - ss((t - (END0 - .3)) / .4)) * ss((t - .3) / .6);
+  if (ga > 0) {
+    X.save(); X.globalAlpha = ga;
+    const x = 1872, y0 = 250, y1 = 830, n = GAUGE.length, step = (y1 - y0) / (n - 1);
+    X.save(); X.shadowColor = 'rgba(60,30,70,.12)'; X.shadowBlur = 24; fillRR(x - 26, y0 - 40, 52, y1 - y0 + 80, 26, 'rgba(255,255,255,.88)'); X.restore();
+    X.fillStyle = '#e6e2ea'; X.fillRect(x - 1.5, y0, 3, y1 - y0);
+    X.fillStyle = GR(0, 0, 10); X.fillRect(x - 1.5, y0, 3, cl(d / 10) * (y1 - y0));
+    for (let i = 0; i < n; i++) { const y = y0 + i * step, on = d >= i - .02; X.beginPath(); X.arc(x, y, on ? 7 : 5, 0, 7); X.fillStyle = on ? '#FF4B61' : '#cfcad6'; X.fill(); }
+    const yy = y0 + cl(d / 10) * (y1 - y0); X.beginPath(); X.arc(x, yy, 13, 0, 7); X.fillStyle = '#fff'; X.fill(); X.lineWidth = 4; X.strokeStyle = '#FF4B61'; X.stroke();
+    const ni = Math.round(d); const la = 1 - Math.min(1, Math.abs(d - ni) * 3);
+    if (la > 0) { const s = GAUGE[ni]; const w = tw(s, 18, 800) + 30; X.globalAlpha = ga * la; X.save(); X.shadowColor = 'rgba(60,30,70,.15)'; X.shadowBlur = 18; fillRR(x - 34 - w, yy - 20, w, 40, 20, '#15131a'); X.restore(); txt(s, x - 34 - w / 2, yy + 1, 18, 800, '#fff', 'center', 'middle'); }
+    X.globalAlpha = ga * .8; txt('DEPTH', x, y0 - 54, 13, 800, '#8a8494', 'center');
+    X.restore();
+  }
+  // end card
+  const ea = ss((t - END0) / .6);
+  if (ea > 0) {
+    X.save(); X.globalAlpha = ea; X.fillStyle = '#faf7f4'; X.fillRect(0, 0, W, H);
+    for (const [c, bx, by] of [['rgba(255,176,0,.22)', .2, .2], ['rgba(192,76,240,.16)', .85, .85]]) { const g = X.createRadialGradient(W * bx, H * by, 0, W * bx, H * by, 900); g.addColorStop(0, c); g.addColorStop(1, 'rgba(250,247,244,0)'); X.fillStyle = g; X.fillRect(0, 0, W, H); }
+    const lg = IMG['aimy-logo-dark.png'], s = lerp(1.08, 1, eout((t - END0) / 2.2)), lw = 470 * s, lh = lw * 634 / 900;
+    if (lg.naturalWidth) X.drawImage(lg, 960 - lw / 2, 430 - lh / 2, lw, lh);
+    const a2 = ss((t - END0 - .9) / .5); X.globalAlpha = ea * a2;
+    txt('A company of AI employees in one chat.', 960, 760, 46, 800, '#15131a', 'center');
+    txt('52 AI employees · Every level built on the one before', 960, 812, 24, 600, '#6b6475', 'center');
+    const a3 = ss((t - END0 - 1.6) / .5); X.globalAlpha = ea * a3;
+    fillRR(960 - 300, 866, 600, 72, 36, '#fff'); X.save(); X.shadowColor = 'rgba(60,30,70,.12)'; X.shadowBlur = 24; X.restore();
+    txt('Give the work. Approve the result.', 1000 - 300 + 28, 911, 22, 700, '#15131a'); X.beginPath(); X.arc(960 + 300 - 36, 902, 24, 0, 7); X.fillStyle = GR(960 + 240, 0, 48); X.fill(); txt('↑', 960 + 264, 904, 26, 800, '#fff', 'center', 'middle');
+    X.restore();
+  }
+  // opening fade-in from white
+  const fa = 1 - ss(t / .5); if (fa > 0) { X.fillStyle = `rgba(250,247,244,${fa})`; X.fillRect(0, 0, W, H); }
+}
+
+window.seek = (t) => { render(Math.max(0, Math.min(DUR - 1e-3, t))); };
+setTimeout(() => window.seek(0), 300);
+</script>
+</body></html>

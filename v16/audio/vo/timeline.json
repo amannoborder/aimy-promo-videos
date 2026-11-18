@@ -1,0 +1,65 @@
+{
+ "voice": "Charon",
+ "lines": [
+  {
+   "say": "Let's see what's inside Amy.",
+   "file": "vo/0.wav",
+   "dur": 1.677
+  },
+  {
+   "say": "One chat. A company of AI employees, working in a fixed order.",
+   "file": "vo/1.wav",
+   "dur": 4.495
+  },
+  {
+   "say": "The Project Manager plans the whole launch for VYRA.",
+   "file": "vo/2.wav",
+   "dur": 2.822
+  },
+  {
+   "say": "Logo draws nine ideas. You pick one.",
+   "file": "vo/3.wav",
+   "dur": 2.653
+  },
+  {
+   "say": "Brand Kit builds the full look.",
+   "file": "vo/4.wav",
+   "dur": 1.629
+  },
+  {
+   "say": "Portrait turns a selfie into a studio shot.",
+   "file": "vo/5.wav",
+   "dur": 2.262
+  },
+  {
+   "say": "Website builds the landing page.",
+   "file": "vo/6.wav",
+   "dur": 1.746
+  },
+  {
+   "say": "YouTube, Long Video and Thumbnail run the channel.",
+   "file": "vo/7.wav",
+   "dur": 2.793
+  },
+  {
+   "say": "X, Instagram, TikTok and Facebook get their posts.",
+   "file": "vo/8.wav",
+   "dur": 3.126
+  },
+  {
+   "say": "SNS Cover dresses every profile.",
+   "file": "vo/9.wav",
+   "dur": 2.094
+  },
+  {
+   "say": "Ads drafts the campaign. And nothing spends until you approve.",
+   "file": "vo/10.wav",
+   "dur": 3.903
+  },
+  {
+   "say": "Fifty-two AI employees. One chat. Amy.",
+   "file": "vo/11.wav",
+   "dur": 4.106
+  }
+ ]
+}

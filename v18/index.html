@@ -1,0 +1,345 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#0E1B26;overflow:hidden}canvas{display:block}</style>
+</head><body><canvas id="c" width="1080" height="1080"></canvas>
+<script>
+// AIMY promo v18 "Kinetic type" — every visual is a pure function of t (window.seek)
+const DUR = 54.44; window.DUR = DUR;
+const C = document.getElementById('c'), X = C.getContext('2d');
+const BG = '#0E1B26', PAPER = '#F3EBDD', AMB = '#F2B544', DIM = 'rgba(243,235,221,0.32)';
+const HEAVY = '"Archivo Black"', SERIF = '"Playfair Display"', MONO = '"JetBrains Mono"';
+['400 100px "Archivo Black"', '400 40px "Playfair Display"', 'italic 400 40px "Playfair Display"', '400 20px "JetBrains Mono"', '600 20px "JetBrains Mono"']
+  .forEach(f => document.fonts.load(f));
+const IMG = {};
+['logo-sheet-nine-en.png', '01-original-photo.jpg', '02-portrait.jpg', 'website-hero-en.jpg', 'thumb-en-2.jpg', 'tiktok-en-squat.jpg',
+ 'girl-pose-1.jpg', 'girl-cover-1.png', 'ad-en-vyra-girl.jpg', 'aimy-logo-white.png', 'brandboard-top.jpg']
+  .forEach(n => { const i = new Image(); i.src = 'assets/' + n; IMG[n] = i; });
+
+// ---------- math ----------
+const cl = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ss = v => { v = cl(v); return v * v * (3 - 2 * v); };
+const eio = v => { v = cl(v); return v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
+const eout = v => 1 - Math.pow(1 - cl(v), 3);
+const ein = v => Math.pow(cl(v), 3);
+const damp = (tau, w = 12) => tau <= 0 ? 1 : (1 + w * tau) * Math.exp(-w * tau);   // critically damped remaining fraction
+const lerp = (a, b, p) => a + (b - a) * p;
+
+// ---------- VO word times (faster-whisper on vo-timed.wav) ----------
+const P = [ // caption phrases: words with start times
+  { id: 'p1', w: [['You', .80], ['were', 1.10], ['told', 1.32], ['to', 1.46], ['hire', 1.66], ['a', 1.88], ['team.', 2.08]], out: 3.15 },
+  { id: 'p2', w: [['Instead,', 3.34], ['you', 4.32], ['open', 4.52], ['one', 4.76], ['chat.', 5.02]], out: 6.1 },
+  { id: 'p3', w: [['AIMY', 6.38], ['is', 6.62], ['a', 6.88], ['company', 6.94], ['of', 7.24], ['AI', 7.5], ['employees.', 7.8]], out: 8.62 },
+  { id: 'p4', w: [['Fifty-two', 8.88], ['of', 9.2], ['them,', 9.48], ['working', 9.94], ['in', 10.26], ['a', 10.42], ['fixed', 10.6], ['order.', 10.82]], out: 11.75 },
+  { id: 'p5', w: [['Each', 40.14], ['one', 40.46], ['builds', 40.7], ['on', 40.94], ['the', 41.12], ['work', 41.24], ['before', 41.38], ['it.', 41.72]], out: 43.05 },
+  { id: 'p6', w: [['And', 43.34], ['nothing', 43.66], ['spends', 43.98], ['until', 44.32], ['you', 44.62], ['approve.', 44.84]], out: 46.25 },
+  { id: 'p7', w: [['A', 48.04], ['company', 48.2], ['of', 48.4], ['AI', 48.64], ['employees,', 48.92], ['in', 49.98], ['one', 50.16], ['chat.', 50.3]], out: 99 },
+];
+const T_LOGO = 47.14, T_APPROVE = 44.84;
+
+// roster beams (number, name, land time) + image rows
+const ROWS = [
+  { k: 'beam', n: '01', s: 'PROJECT MANAGER', t: 12.04 },
+  { k: 'beam', n: '02', s: 'COUNSELING', t: 13.22 },
+  { k: 'beam', n: '05', s: 'MARKET ANALYSIS', t: 14.34 },
+  { k: 'beam', n: '11', s: 'KNOWLEDGE', t: 15.74 },
+  { k: 'beam', n: '12', s: 'FUNNEL', t: 16.76 },
+  { k: 'beam', n: '13', s: 'LOGO', t: 17.94 },
+  { k: 'img', id: 'logo', t: 18.82, h: 260 },
+  { k: 'beam', n: '14', s: 'BRAND KIT', t: 20.86 },
+  { k: 'img', id: 'board', t: 21.36, h: 250 },
+  { k: 'beam', n: '15', s: 'PORTRAIT', t: 22.02 },
+  { k: 'img', id: 'portrait', t: 22.94, h: 250 },
+  { k: 'beam', n: '17', s: 'WEBSITE', t: 25.08 },
+  { k: 'img', id: 'web', t: 25.62, h: 250 },
+  { k: 'beam', n: '21', s: 'YOUTUBE', t: 26.84 },
+  { k: 'beam', n: '22', s: 'LONG VIDEO', t: 27.72 },
+  { k: 'beam', n: '23', s: 'THUMBNAIL', t: 28.8 },
+  { k: 'img', id: 'thumb', t: 29.36, h: 250 },
+  { k: 'beam', n: '24', s: 'X', t: 30.2 },
+  { k: 'beam', n: '25', s: 'INSTAGRAM', t: 31.36 },
+  { k: 'beam', n: '26', s: 'SHORT VIDEO', t: 32.54 },
+  { k: 'beam', n: '27', s: 'THREADS', t: 33.66 },
+  { k: 'beam', n: '28', s: 'TIKTOK', t: 34.7 },
+  { k: 'beam', n: '29', s: 'FACEBOOK', t: 35.54 },
+  { k: 'img', id: 'social', t: 36.08, h: 250 },
+  { k: 'beam', n: '35', s: 'SNS COVER', t: 36.76 },
+  { k: 'img', id: 'cover', t: 37.3, h: 230 },
+  { k: 'beam', n: '42', s: 'ADS', t: 38.12 },
+  { k: 'img', id: 'ad', t: 38.66, h: 250 },
+];
+const TW = 840, HALF = 420, GAP = 18, IMGGAP = 34;
+
+// ---------- layout (needs fonts → recomputed each seek, cheap) ----------
+function capH(f) { X.font = `${f}px ${HEAVY}`; return X.measureText('H').actualBoundingBoxAscent; }
+function textW(s, f, fam = HEAVY, st = '') { X.font = `${st}${f}px ${fam}`; return X.measureText(s).width; }
+function fit(s, w, max) { return Math.min(max, w / textW(s, 100) * 100); }
+let L;
+function layout() {
+  const fF = fit('ONE CHAT', TW, 400), found = { f: fF, c: capH(fF) };
+  found.h = found.c + 28;
+  let y = 0, i = 0;                                   // y = bottom of next row (world, up = negative)
+  const rows = ROWS.map(r => {
+    const o = Object.assign({}, r);
+    if (r.k === 'beam') { o.f = fit(r.s, TW, 150); o.c = capH(o.f); o.w = textW(r.s, o.f); o.h = o.c + GAP + 12; o.side = (i++ % 2) ? 1 : -1; }
+    else { o.h = r.h + IMGGAP; }
+    o.bot = y; o.top = y - o.h; y = o.top; return o;
+  });
+  const fA = fit('APPROVE', TW * 1.5, 400), ap = { f: fA, c: capH(fA), w: textW('APPROVE', fA) };
+  ap.h = ap.c + 30; ap.bot = y; ap.top = y - ap.h;
+  return { found, rows, top: y, ap };
+}
+
+// ---------- camera ----------
+function buildTop(t) {   // structure-follow camera: smooth step through each row's top
+  let v = -300, prev = -300;
+  for (const r of L.rows) {
+    const tgt = Math.min(r.top, -300), st = r.t - 0.2;
+    v += (tgt - prev) * ss((t - st) / 0.6); prev = tgt;
+  }
+  return v;
+}
+function camAt(t) {
+  let cam = { cx: 0, cy: buildTop(t) - 20 + 200 * ss((t - 11.2) / 1.3), s: 1 };
+  const fullTop = L.top - 40, fullBot = L.found.h + 30;
+  const sF = 960 / (fullBot - fullTop);
+  const FULL0 = { s: sF, cx: (540 - 330) / sF, cy: (fullTop + fullBot) / 2 };
+  const apTop = L.ap.top - 30, sF1 = 880 / (fullBot - apTop);
+  const FULL1 = { s: sF1, cx: (540 - 330) / sF1, cy: (apTop + fullBot) / 2 - 36 / sF1 };
+  const sC = 0.45, cxC = (540 - 300) / sC;
+  const BASE = { s: sC, cx: cxC, cy: fullBot + (540 - 1000) / sC };          // foundation at the bottom of frame
+  const TOPC = { s: sC, cx: cxC, cy: L.top + (540 - 540) / sC };             // crane up: top of structure at y 640
+  const DIVE = { s: sF1, cx: FULL1.cx, cy: fullBot + 1300 / sF1 };
+  const segs = [[38.95, 39.9, BASE, eio], [39.9, 43.4, TOPC, eio], [45.1, 46.0, FULL1, eio], [46.3, 46.95, DIVE, ein]];
+  for (const [a, b, g, e] of segs) {
+    const p = e((t - a) / (b - a)); if (p <= 0) continue;
+    // interpolate scale in log space, and keep the screen point coherent
+    cam = { s: Math.exp(lerp(Math.log(cam.s), Math.log(g.s), p)), cx: lerp(cam.cx, g.cx, p), cy: lerp(cam.cy, g.cy, p) };
+  }
+  return cam;
+}
+
+// ---------- drawing helpers ----------
+function framedImg(img, x, y, w, h, a = 1, sx, sy, sw, sh) {
+  X.save(); X.globalAlpha *= a;
+  X.fillStyle = PAPER; X.fillRect(x - 6, y - 6, w + 12, h + 12);
+  if (img.complete && img.naturalWidth) { if (sw) X.drawImage(img, sx, sy, sw, sh, x, y, w, h); else X.drawImage(img, x, y, w, h); }
+  X.restore();
+}
+function imgW(n, h) { const i = IMG[n]; return i.naturalWidth ? i.naturalWidth / i.naturalHeight * h : h; }
+function mono(s, x, y, size, col, align = 'left', wt = 400) { X.font = `${wt} ${size}px ${MONO}`; X.fillStyle = col; X.textAlign = align; X.textBaseline = 'alphabetic'; X.fillText(s, x, y); X.textAlign = 'left'; }
+// word-by-word serif reveal; returns nothing. words = [[w,t],...]
+function serifWords(words, x, y, size, maxW, t, col = PAPER, opt = {}) {
+  const st = opt.italic ? 'italic 400 ' : '400 ';
+  X.font = `${st}${size}px ${SERIF}`; X.textBaseline = 'alphabetic';
+  const sp = X.measureText(' ').width, lh = size * (opt.lh || 1.22);
+  let cx = x, cy = y; const lines = [[]];
+  for (const [w] of words) { const ww = X.measureText(w).width; if (cx + ww > x + maxW && cx > x) { cx = x; cy += lh; lines.push([]); } lines[lines.length - 1].push([w, cx, cy, ww]); cx += ww + sp; }
+  let k = 0;
+  for (const ln of lines) {
+    let off = 0;
+    if (opt.center) { const last = ln[ln.length - 1]; off = (x + maxW / 2) - (ln[0][1] + (last[1] + last[3] - ln[0][1]) / 2); }
+    for (const [w, wx, wy] of ln) {
+      const wt = words[k++][1], p = cl((t - (wt - 0.06)) / 0.22);
+      if (p <= 0) continue;
+      X.globalAlpha = p * (opt.alpha ?? 1);
+      X.fillStyle = (opt.amberLast && k === words.length) ? AMB : col;
+      X.font = `${(opt.amberLast && k === words.length) ? 'italic 600 ' : st}${size}px ${SERIF}`;
+      X.fillText(w, wx + off, wy + (1 - eout(p)) * size * 0.35);
+    }
+  }
+  X.globalAlpha = 1;
+}
+
+// ---------- structure ----------
+function drawBeam(r, t) {
+  const st = r.t - 0.2; if (t < st) return;
+  const tau = t - st, off = damp(tau, 11) * 1150 * r.side;   // slides in from its own side
+  const yb = r.bot - 12, yt = yb - GAP - r.c + GAP;            // text baseline yb-GAP? keep simple
+  const base = r.bot - 12 - GAP / 2, capTop = base - r.c;
+  const tx = r.side < 0 ? -HALF : HALF - r.w;
+  X.save(); X.translate(off, 0);
+  X.font = `${r.f}px ${HEAVY}`; X.fillStyle = PAPER; X.textBaseline = 'alphabetic'; X.fillText(r.s, tx, base);
+  X.restore();
+  // beam bar extends from the word to the far edge
+  const free = TW - r.w - 22;
+  if (free > 40) {
+    const g = eout((t - (r.t + 0.02)) / 0.42), bw = free * g;
+    if (bw > 0) {
+      X.fillStyle = PAPER;
+      if (r.side < 0) X.fillRect(-HALF + r.w + 22, capTop, bw, r.c); else X.fillRect(HALF - r.w - 22 - bw, capTop, bw, r.c);
+    }
+  }
+  // amber floor rule + roster index on the scaffold
+  const rp = eout((t - r.t) / 0.5);
+  X.fillStyle = AMB; X.fillRect(-HALF, r.bot - 4, TW * rp, 3);
+  X.globalAlpha = cl((t - r.t) / 0.3);
+  mono(r.n, -HALF - 26, base, 22, AMB, 'right', 600);
+  X.globalAlpha = 1;
+}
+function drop(t, t0) { const tau = t - (t0 - 0.16); return tau < 0 ? null : { dy: -damp(tau, 10) * 420, a: cl(tau / 0.25) }; }
+function drawImgRow(r, t) {
+  const d = drop(t, r.t); if (!d) return;
+  const h = r.h - IMGGAP, y = r.bot - IMGGAP / 2 - h + d.dy;
+  X.save(); X.globalAlpha = d.a;
+  const lab = (s, x) => mono(s, x, y + h + 26, 16, DIM, 'left', 600);
+  if (r.id === 'logo') {
+    const x = -HALF + 6; framedImg(IMG['logo-sheet-nine-en.png'], x, y, h, h);
+    const hp = cl((t - 19.76) / 0.25);     // "you pick one" → one idea gets picked
+    if (hp > 0) { X.strokeStyle = AMB; X.lineWidth = 5; X.globalAlpha = d.a * hp; const c = h / 3; X.strokeRect(x + 4, y + 4, c - 8, c - 8); X.globalAlpha = d.a; }
+    serifWords([['nine', 18.82], ['ideas,', 19.0], ['you', 19.64], ['pick', 19.76], ['one.', 19.94]], x + h + 44, y + 92, 52, 470, t, PAPER, { italic: true });
+    mono('VYRA · HOME FITNESS · LOGO IDEAS', x + h + 46, y + h - 6, 17, AMB, 'left', 600);
+  } else if (r.id === 'board') {
+    const w = imgW('brandboard-top.jpg', h), x = HALF - 6 - w; framedImg(IMG['brandboard-top.jpg'], x, y, w, h);
+    mono('BRAND KIT BOARD', x - 30, y + h - 6, 17, AMB, 'right', 600);
+  } else if (r.id === 'portrait') {
+    const w1 = imgW('01-original-photo.jpg', h), w2 = imgW('02-portrait.jpg', h), x1 = -HALF + 6, x2 = x1 + w1 + 86;
+    framedImg(IMG['01-original-photo.jpg'], x1, y, w1, h);
+    const d2 = drop(t, 23.64);
+    if (d2) {
+      X.save(); X.globalAlpha = d.a * d2.a; framedImg(IMG['02-portrait.jpg'], x2, y + d2.dy * 0.4, w2, h);
+      X.strokeStyle = AMB; X.lineWidth = 4; X.beginPath(); X.moveTo(x1 + w1 + 22, y + h / 2); X.lineTo(x2 - 22, y + h / 2); X.stroke();
+      X.beginPath(); X.moveTo(x2 - 34, y + h / 2 - 12); X.lineTo(x2 - 22, y + h / 2); X.lineTo(x2 - 34, y + h / 2 + 12); X.stroke(); X.restore();
+    }
+    serifWords([['a', 22.78], ['selfie', 22.94], ['becomes', 23.14], ['a', 23.44], ['studio', 23.64], ['portrait.', 23.9]], x2 + w2 + 34, y + 70, 40, HALF - (x2 + w2 + 34), t, PAPER, { italic: true });
+  } else if (r.id === 'web') {
+    const w = imgW('website-hero-en.jpg', h), x = HALF - 6 - w; framedImg(IMG['website-hero-en.jpg'], x, y, w, h);
+    mono('VYRA WEBSITE', x - 30, y + h - 6, 17, AMB, 'right', 600);
+  } else if (r.id === 'thumb') {
+    const w = imgW('thumb-en-2.jpg', h), x = -HALF + 6; framedImg(IMG['thumb-en-2.jpg'], x, y, w, h);
+    mono('YOUTUBE THUMBNAIL', x + w + 30, y + h - 6, 17, AMB, 'left', 600);
+  } else if (r.id === 'social') {
+    const w1 = imgW('tiktok-en-squat.jpg', h), w2 = imgW('girl-pose-1.jpg', h), x2 = HALF - 6 - w2, x1 = x2 - 30 - w1;
+    framedImg(IMG['tiktok-en-squat.jpg'], x1, y, w1, h); framedImg(IMG['girl-pose-1.jpg'], x2, y, w2, h);
+    mono('SOCIAL POSTS', x1 - 30, y + h - 6, 17, AMB, 'right', 600);
+  } else if (r.id === 'cover') {
+    framedImg(IMG['girl-cover-1.png'], -HALF + 6, y, TW - 12, h);
+  } else if (r.id === 'ad') {
+    const x = HALF - 6 - h; framedImg(IMG['ad-en-vyra-girl.jpg'], x, y, h, h);
+    mono('AD DRAFT', x - 30, y + h - 34, 17, AMB, 'right', 600);
+    mono('WAITS FOR YOUR APPROVAL', x - 30, y + h - 6, 17, DIM, 'right', 600);
+  }
+  X.restore();
+}
+function drawFoundation(t) {
+  const f = L.found; if (t < 4.6) return;
+  const rise = damp(t - 4.6, 9) * 520;
+  const base = f.c + 8 + rise;
+  X.save(); X.beginPath(); X.rect(-HALF - 200, 0, TW + 400, f.h + 40); X.clip();
+  X.font = `${f.f}px ${HEAVY}`; X.fillStyle = PAPER; X.textBaseline = 'alphabetic'; X.textAlign = 'center'; X.fillText('ONE CHAT', 0, base); X.textAlign = 'left';
+  X.restore();
+}
+function drawScaffold(t, topY) {
+  const g = eio((t - 6.9) / 1.3); if (g <= 0) return;
+  X.fillStyle = AMB;
+  const len = (-topY) * g;
+  X.fillRect(-HALF - 14, -len, 2, len); X.fillRect(HALF + 12, -len, 2, len);
+}
+function drawApprove(t) {
+  const a = L.ap, st = T_APPROVE - 0.32; if (t < st) return 0;
+  const tau = t - st, fall = 0.32;
+  let dy;
+  if (tau < fall) dy = -(1 - ein(tau / fall)) * 1400;
+  else { const k = tau - fall; dy = -Math.exp(-7 * k) * Math.sin(k * 22) * 26; }
+  const base = a.bot - 14 + dy;
+  X.font = `${a.f}px ${HEAVY}`; X.fillStyle = AMB; X.textAlign = 'center'; X.textBaseline = 'alphabetic'; X.fillText('APPROVE', 0, base); X.textAlign = 'left';
+  X.fillStyle = PAPER; X.fillRect(-a.w / 2, base + 8, a.w, 4);
+  return tau >= fall ? Math.exp(-6 * (tau - fall)) * Math.sin((tau - fall) * 20 + 1.2) : 0;
+}
+
+// ---------- scene ----------
+function seek(t) {
+  t = cl(t, 0, DUR);
+  L = layout();
+  X.setTransform(1, 0, 0, 1, 0, 0); X.globalAlpha = 1;
+  X.fillStyle = BG; X.fillRect(0, 0, 1080, 1080);
+
+  // ---------- world (the structure) ----------
+  if (t >= 3.2 && t < 47.25) {
+    const cam = camAt(t);
+    const comp = (t > T_APPROVE) ? 0 : 0;
+    X.setTransform(cam.s, 0, 0, cam.s, 540 - cam.cx * cam.s, 540 - cam.cy * cam.s);
+    // load wave from APPROVE travels through the floors (small vertical squash about the floor line)
+    X.save();
+    const sq = (t > T_APPROVE) ? 0.012 * Math.exp(-6 * (t - T_APPROVE)) * Math.cos((t - T_APPROVE) * 20) : 0;
+    X.scale(1, 1 - sq);
+    // floor line: the opening line falls to become the floor
+    const fp = eio((t - 3.34) / 1.1);
+    X.fillStyle = AMB;
+    drawScaffold(t, t > 39 ? L.top - 200 : buildTop(t) - 700);
+    drawFoundation(t);
+    if (t >= 4.34) { X.fillStyle = AMB; X.fillRect(-HALF - 40, -2, TW + 80, 4); }
+    for (const r of L.rows) (r.k === 'beam' ? drawBeam : drawImgRow)(r, t);
+    X.restore();
+    drawApprove(t);
+    X.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // ---------- opening: TEAM lintel pressing a narrow opening ----------
+  if (t < 4.34) {
+    const f = fit('TEAM', 936, 420), c = capH(f);
+    const lower = 70 * ss((t - 0.6) / 2.6);
+    const out = ein((t - 3.34) / 0.7) * 900;
+    const base = 120 + c + lower - out;
+    X.font = `${f}px ${HEAVY}`; X.fillStyle = PAPER; X.textBaseline = 'alphabetic'; X.fillText('TEAM', 72, base);
+    // the opening line under it; on "Instead" it falls to become the floor
+    const ly0 = 120 + c + 70 + 150, lyFloor = 540 + (0 - (-320)) ; // matches build cam: Y=0 → 860
+    const ly = lerp(ly0, lyFloor, eio((t - 3.34) / 1.0));
+    if (t < 3.2) { X.fillStyle = AMB; X.fillRect(72 - 40 * 0, ly, 936, 3); }
+    else if (t < 4.4) { X.fillStyle = AMB; X.fillRect(72, ly, 936, 3); }
+  }
+
+  // ---------- 52 → becomes the counter ----------
+  if (t >= 8.7 && t < 11.6) {
+    const app = 1 - damp(t - 8.8, 10), mv = eio((t - 10.6) / 0.85);
+    const f0 = 470, f1 = 22;
+    const f = Math.exp(lerp(Math.log(f0 * (0.78 + 0.22 * app)), Math.log(f1), mv));
+    X.font = `${f}px ${HEAVY}`;
+    const w = X.measureText('52').width;
+    const x = lerp(540 - w / 2, 1008 - w, mv), y = lerp(740, 44, mv);
+    X.globalAlpha = cl(app * 1.4); X.fillStyle = mv > 0 ? (mv > 0.5 ? AMB : PAPER) : PAPER; X.fillText('52', x, y); X.globalAlpha = 1;
+  }
+
+  // ---------- captions ----------
+  const capPos = {
+    p1: () => { const f = fit('TEAM', 936, 420), c = capH(f); return [72, 120 + c + 70 * ss((t - 0.6) / 2.6) + 110, 58, 936]; },
+    p2: () => [72, 150, 58, 936], p3: () => [72, 150, 58, 936], p4: () => [72, 150, 58, 936],
+    p5: () => [640, 360, 56, 400], p6: () => [640, 360, 56, 400],
+    p7: () => [90, 770, 50, 900],
+  };
+  for (const ph of P) {
+    if (t < ph.w[0][1] - 0.1 || t > ph.out) continue;
+    const fo = 1 - cl((t - (ph.out - 0.3)) / 0.3);
+    const [x, y, s, w] = capPos[ph.id]();
+    X.globalAlpha = fo;
+    serifWords(ph.w, x, y, s, w, t, PAPER, { alpha: fo, center: ph.id === 'p7', amberLast: ph.id === 'p6' });
+    X.globalAlpha = 1;
+  }
+
+  // ---------- end card ----------
+  if (t >= 46.9) {
+    const a = cl((t - (T_LOGO - 0.2)) / 0.5), sc = 1 + damp(t - (T_LOGO - 0.2), 7) * 0.08;
+    const img = IMG['aimy-logo-white.png'], w = 470 * sc, h = w * 634 / 900;
+    X.globalAlpha = a; if (img.naturalWidth) X.drawImage(img, 540 - w / 2, 420 - h / 2, w, h);
+    X.globalAlpha = cl((t - 50.9) / 0.5);
+    mono('52 AI EMPLOYEES  ·  ONE CHAT  ·  YOU APPROVE', 540, 930, 20, AMB, 'center', 600);
+    X.globalAlpha = 1;
+  }
+
+  // ---------- HUD: timing marks ----------
+  let last = null; for (const r of L.rows) if (r.k === 'beam' && t >= r.t) last = r;
+  X.globalAlpha = t < 46.9 ? 1 : 1 - cl((t - 46.9) / 0.4);
+  if (t >= 11.3 && t < 47.3) {
+    mono(last ? `${last.n} ${last.s}` : 'IN ORDER', 72, 44, 18, DIM, 'left', 600);
+    mono(`${last ? last.n : '00'} / 52`, 1008, 44, 18, AMB, 'right', 600);
+  }
+  X.globalAlpha = 1;
+  X.fillStyle = 'rgba(243,235,221,0.14)'; X.fillRect(72, 60, 936, 1);
+  X.fillStyle = AMB; X.fillRect(72, 59, 936 * (t / DUR), 3);
+  const tc = t.toFixed(2).padStart(5, '0');
+  if (t < 11.3) mono(`${tc}  —  ${DUR.toFixed(2)}`, 1008, 44, 16, DIM, 'right');
+}
+window.seek = seek;
+setTimeout(() => seek(0), 300);
+</script></body></html>

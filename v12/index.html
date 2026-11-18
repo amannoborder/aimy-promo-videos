@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AIMY AI Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=block" rel="stylesheet">
+<style>
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#cfe6f7;font-family:Inter,system-ui,sans-serif;color:#141a2e}
+#gl{position:absolute;inset:0;width:1920px;height:1080px}
+#ov{position:absolute;inset:0;pointer-events:none}
+.chip{position:absolute;left:0;top:0;display:flex;align-items:center;gap:9px;padding:7px 14px 7px 10px;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 6px 18px rgba(20,26,46,.18);font-size:19px;font-weight:600;white-space:nowrap;transform-origin:50% 100%}
+.chip .n{font-weight:800;color:#6b7280;font-size:16px}
+.chip .st{font-weight:800}
+.chip .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none}
+.chip.working .ic{background:#fff3d6}.chip.working .st{color:#b7791f}
+.chip.done .ic{background:#dcf5e4}.chip.done .st{color:#15803d}
+.chip.needs .ic{background:#ffe1d9}.chip.needs .st{color:#e4572e}
+.chip.needs{box-shadow:0 0 0 3px rgba(228,87,46,.55),0 8px 22px rgba(228,87,46,.3)}
+.cap{position:absolute;left:72px;bottom:70px;padding:24px 34px 26px;border-radius:24px;background:rgba(255,255,255,.9);box-shadow:0 14px 40px rgba(20,26,46,.16);font-weight:800;font-size:58px;line-height:1.08;letter-spacing:-.02em}
+.cap .a{color:#ff6a3d}
+.desk{position:absolute;left:72px;top:64px;padding:18px 26px 18px 22px;border-radius:20px;background:rgba(255,255,255,.93);box-shadow:0 10px 30px rgba(20,26,46,.14);display:flex;gap:18px;align-items:center}
+.desk .num{width:66px;height:66px;border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:30px;color:#fff}
+.desk .t1{font-weight:800;font-size:34px;letter-spacing:-.01em}
+.desk .t2{font-weight:500;font-size:21px;color:#4b5563;margin-top:3px}
+.desk .t3{font-weight:700;font-size:15px;color:#9ca3af;margin-top:5px;letter-spacing:.08em;text-transform:uppercase}
+.title{position:absolute;left:0;right:0;top:190px;text-align:center;font-weight:900;font-size:92px;line-height:1.02;letter-spacing:-.03em;color:#141a2e;text-shadow:0 2px 30px rgba(255,255,255,.9)}
+.title .a{color:#ff6a3d}
+.compose{position:absolute;left:510px;width:900px;top:690px}
+.cbox{background:#fff;border-radius:22px;box-shadow:0 18px 50px rgba(20,26,46,.22);padding:22px 24px;display:flex;align-items:center;gap:16px;font-size:28px;font-weight:500}
+.cbox .ph{color:#9ca3af}
+.cbox .send{margin-left:auto;width:52px;height:52px;border-radius:14px;background:#141a2e;display:grid;place-items:center}
+.cbox .caret{display:inline-block;width:3px;height:32px;background:#ff6a3d;vertical-align:-6px;margin-left:2px}
+.bubble{position:absolute;right:0;padding:16px 24px;border-radius:20px 20px 6px 20px;background:#141a2e;color:#fff;font-size:27px;font-weight:600;box-shadow:0 14px 34px rgba(20,26,46,.25)}
+.reply{position:absolute;left:0;padding:14px 22px;border-radius:20px 20px 20px 6px;background:#fff;font-size:24px;font-weight:600;box-shadow:0 14px 34px rgba(20,26,46,.18);display:flex;gap:12px;align-items:center}
+.legend{position:absolute;top:70px;left:50%;transform:translateX(-50%);display:flex;gap:18px;padding:16px 20px;border-radius:22px;background:rgba(255,255,255,.93);box-shadow:0 12px 34px rgba(20,26,46,.16)}
+.legend .chip{position:relative;font-size:26px;padding:10px 20px 10px 12px;box-shadow:none;background:#f6f7f9}
+.legend .chip .ic{width:30px;height:30px}
+.modal{position:absolute;right:90px;top:150px;width:640px;border-radius:28px;background:#fff;box-shadow:0 30px 80px rgba(20,26,46,.3);padding:30px 32px 32px}
+.modal .hd{display:flex;align-items:center;gap:14px;font-weight:800;font-size:24px}
+.modal .tag{margin-left:auto;font-size:18px;font-weight:800;padding:7px 14px;border-radius:999px}
+.modal h2{margin:18px 0 18px;font-size:40px;letter-spacing:-.02em;line-height:1.1}
+.modal .th{display:flex;gap:12px}
+.modal .th img{height:150px;border-radius:12px;object-fit:cover}
+.modal .row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:16px 20px;border-radius:16px;background:#f6f7f9;font-size:23px;font-weight:600}
+.modal .row b{font-weight:800}
+.modal .btns{display:flex;gap:14px;margin-top:22px}
+.modal .btn{flex:1;text-align:center;padding:18px;border-radius:16px;font-size:25px;font-weight:800}
+.end{position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.end img{width:560px;height:auto}
+.end .l1{margin-top:46px;font-size:46px;font-weight:800;letter-spacing:-.02em}
+.end .l2{margin-top:14px;font-size:27px;font-weight:600;color:#6b7280}
+.cursor{position:absolute;width:44px;height:44px}
+</style></head>
+<body>
+<canvas id="gl" width="1920" height="1080"></canvas>
+<div id="ov"></div>
+<script src="three.iife.js"></script>
+<script src="assets.js"></script>
+<script>
+(function(){
+const DUR = 54.5; window.DUR = DUR;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ss=(a,b,x)=>{const u=clamp((x-a)/(b-a));return u*u*(3-2*u)};
+const lerp=(a,b,u)=>a+(b-a)*u;
+const fade=(t,a,b,f=0.35)=>ss(a,a+f,t)*(1-ss(b-f,b,t));
+
+// ---------------- roster ----------------
+const ROSTER=[
+ {n:'01',name:'Project Manager',d:'Plans the whole launch',row:0},
+ {n:'02',name:'Counseling',d:'Learns who VYRA is for',row:0},
+ {n:'05',name:'Market Analysis',d:'Maps the home-fitness market',row:0},
+ {n:'11',name:'Knowledge',d:'Keeps every brand fact',row:0},
+ {n:'12',name:'Funnel',d:'Designs the customer path',row:0},
+ {n:'13',name:'Logo',d:'Nine ideas — you pick one',row:1},
+ {n:'14',name:'Brand Kit',d:'Colors, type and layouts',row:1},
+ {n:'15',name:'Portrait',d:'Selfie → studio portrait',row:1},
+ {n:'17',name:'Website',d:'The VYRA landing page',row:1},
+ {n:'21',name:'YouTube',d:'Channel and video plan',row:2},
+ {n:'22',name:'Long Video',d:'Edits the full workout video',row:2},
+ {n:'23',name:'Thumbnail',d:'Three options per video',row:2},
+ {n:'26',name:'Short Video',d:'Vertical clips',row:2},
+ {n:'24',name:'X',d:'Posts for X',row:3},
+ {n:'25',name:'Instagram',d:'Feed and photos',row:3},
+ {n:'27',name:'Threads',d:'Conversation posts',row:3},
+ {n:'28',name:'TikTok',d:'Short-form for TikTok',row:3},
+ {n:'29',name:'Facebook',d:'Page and posts',row:3},
+ {n:'35',name:'SNS Cover',d:'Covers for every channel',row:3},
+ {n:'42',name:'Ads',d:'Nothing spends until you approve',row:4},
+];
+const COLORS=['#6d5dfc','#ff7a59','#14b8a6','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#22c55e','#0ea5e9','#ef4444','#a855f7','#f97316','#10b981','#1f2937','#e1306c','#64748b','#06b6d4','#2563eb','#d946ef','#ff6a3d'];
+const ROWZ=[7,1,-5,-11];
+const ROWDIR=[1,-1,1,-1];
+const SP=3.0;
+// positions
+{ const byRow=[[],[],[],[],[]]; ROSTER.forEach((r,i)=>{r.i=i;r.color=COLORS[i];byRow[r.row].push(r)});
+  for(let k=0;k<4;k++){const L=byRow[k];const n=L.length;L.forEach((r,j)=>{const off=(j-(n-1)/2)*SP; r.x=ROWDIR[k]>0?off:-off; r.z=ROWZ[k];});}
+  const a=ROSTER[19]; a.x=14.5; a.z=-2.2; }
+// centre times
+const CT=[10.6,11.9,12.9,13.9,14.9, 16.9,19.0,20.2,21.4, 22.6,23.45,24.3,25.3, 26.4,26.95,27.45,27.9,28.6,29.4, 36.6];
+ROSTER.forEach((r,i)=>r.c=CT[i]);
+
+function status(i,t){
+  const r=ROSTER[i];
+  if(i===5){ if(t<15.8) return 'working'; if(t<18.05) return 'needs'; return 'done'; }
+  if(i===19){ if(t<34.45) return 'working'; if(t<41.1) return 'needs'; return 'done'; }
+  return t<r.c+0.35?'working':'done';
+}
+
+// ---------------- three setup ----------------
+const T=THREE;
+const canvas=document.getElementById('gl');
+const R=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+R.setPixelRatio(1); R.setSize(1920,1080,false);
+R.shadowMap.enabled=true; R.shadowMap.type=T.PCFSoftShadowMap;
+R.outputColorSpace=T.SRGBColorSpace;
+const scene=new T.Scene();
+scene.background=new T.Color('#cfe6f7');
+scene.fog=new T.Fog('#cfe6f7',60,130);
+const cam=new T.PerspectiveCamera(42,1920/1080,0.1,300);
+scene.add(new T.HemisphereLight('#ffffff','#c9b9a3',1.6));
+const sun=new T.DirectionalLight('#fff4e2',2.4); sun.position.set(14,26,16); sun.target.position.set(2,0,-3);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-26,right:26,top:24,bottom:-24,near:1,far:80}); sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.03;
+scene.add(sun,sun.target);
+
+const matCache={};
+function M(c,o={}){const k=c+JSON.stringify(o); if(!matCache[k]) matCache[k]=new T.MeshLambertMaterial(Object.assign({color:c,flatShading:true},o)); return matCache[k];}
+function box(w,h,d,c,x,y,z,parent=scene,cast=true){const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(c));m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m;}
+function cyl(rt,rb,h,c,x,y,z,seg=8,parent=scene){const m=new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg),M(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
+
+// ground + office
+{ const g=new T.Mesh(new T.PlaneGeometry(260,260),M('#a9d18e')); g.rotation.x=-Math.PI/2; g.position.y=-0.22; g.receiveShadow=true; scene.add(g);
+  // path
+  const p=new T.Mesh(new T.PlaneGeometry(6,80),M('#d9d2c3')); p.rotation.x=-Math.PI/2; p.position.set(-2,-0.2,40); scene.add(p);
+  box(31,0.24,28,'#efeae2',3.5,-0.12,-2,scene,false);
+  const rug=(w,d,c,x,z)=>{const m=new T.Mesh(new T.PlaneGeometry(w,d),M(c));m.rotation.x=-Math.PI/2;m.position.set(x,0.006,z);m.receiveShadow=true;scene.add(m);};
+  rug(17.5,4.6,'#dfe7ff',0,7.3); rug(14.5,4.6,'#efe2ff',0,1.3); rug(14.5,4.6,'#d9f2e3',0,-4.7); rug(20.5,4.6,'#ffe6d8',0,-10.7);
+  rug(6.6,7.6,'#ffe1e1',14.5,-2.2);
+  // walls: low perimeter, tall back wall with windows
+  const W='#fbfaf7';
+  box(31,3.2,0.3,W,3.5,1.6,-15.85); // back
+  for(let i=0;i<7;i++){ box(2.6,1.5,0.06,'#bfe0f6',-8.5+i*4,1.9,-15.68,scene,false); }
+  box(0.3,1.1,28,W,-11.85,0.55,-2); // left
+  box(0.3,1.1,28,W,18.85,0.55,-2); // right
+  box(12,1.1,0.3,W,-6,0.55,11.85); box(14,1.1,0.3,W,12,0.55,11.85); // front with entrance gap
+  // ads glass room (x 11.2..17.8, z -6..1.6)
+  const glass=new T.MeshLambertMaterial({color:'#bfe3ff',transparent:true,opacity:0.22,depthWrite:false});
+  const gw=(w,d,x,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,2.6,d),glass);m.position.set(x,1.3,z);scene.add(m);};
+  gw(0.06,7.6,11.2,-2.2); gw(6.6,0.06,14.5,-6.0); gw(2.2,0.06,12.3,1.6); gw(2.2,0.06,16.7,1.6);
+  [[11.2,-6],[11.2,1.6],[17.8,-6],[17.8,1.6],[13.4,1.6],[15.6,1.6]].forEach(([x,z])=>box(0.12,2.7,0.12,'#94a3b8',x,1.35,z));
+  box(6.7,0.1,0.12,'#94a3b8',14.5,2.65,1.6); box(0.12,0.1,7.7,'#94a3b8',11.2,2.65,-2.2);
+}
+// floor labels
+function textTex(str,w,h,opts={}){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  x.clearRect(0,0,w,h); if(opts.bg){x.fillStyle=opts.bg;x.fillRect(0,0,w,h);} x.fillStyle=opts.color||'#141a2e'; x.font=`${opts.weight||800} ${opts.size||90}px Inter, sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.fillText(str,w/2,h/2+4);
+  const t=new T.CanvasTexture(c); t.colorSpace=T.SRGBColorSpace; t.anisotropy=8; return {tex:t,canvas:c,ctx:x,draw:()=>{}};}
+const LABELS=[];
+function floorLabel(str,x,z,rot,color){const tt=textTex(str,1024,180,{color,size:110});const m=new T.Mesh(new T.PlaneGeometry(6.2,1.09),new T.MeshBasicMaterial({map:tt.tex,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.rotation.z=rot;m.position.set(x,0.02,z);scene.add(m);LABELS.push({tt,str,color});}
+floorLabel('STRATEGY',-10.3,7.3,Math.PI/2,'#4f5fbf');
+floorLabel('BRAND & WEB',-9.3,1.3,Math.PI/2,'#8a4fd0');
+floorLabel('VIDEO',-9.3,-4.7,Math.PI/2,'#1f8f5c');
+floorLabel('SOCIAL',-10.3,-10.7,Math.PI/2,'#d4622f');
+floorLabel('ADS',14.5,-5.3,0,'#d23c3c');
+
+// props
+function tree(x,z,s=1){cyl(0.14*s,0.18*s,1.0*s,'#8a6a4a',x,0.3*s-0.2,z,6);const c=new T.Mesh(new T.ConeGeometry(0.95*s,2.2*s,7),M(['#5fae5b','#4f9e55','#6cbb62'][Math.abs(Math.round(x*7+z*3))%3]));c.position.set(x,1.7*s-0.2,z);c.castShadow=true;scene.add(c);}
+[[-16,-8],[-17,2],[-15.5,9],[-18,-16],[24,-10],[23,3],[25,12],[22,-18],[-6,-21],[6,-22],[16,-21],[-14,16],[10,17],[20,16],[-20,-2],[28,-2]].forEach(([x,z],i)=>tree(x,z,1+((i*37)%5)/10));
+function plant(x,z,s=1){cyl(0.28*s,0.22*s,0.5*s,'#e6ded2',x,0.25*s,z,8);const b=new T.Mesh(new T.IcosahedronGeometry(0.5*s,0),M('#4fa860'));b.position.set(x,0.9*s,z);b.castShadow=true;scene.add(b);const b2=new T.Mesh(new T.IcosahedronGeometry(0.35*s,0),M('#5dbb6c'));b2.position.set(x+0.15*s,1.3*s,z-0.1);b2.castShadow=true;scene.add(b2);}
+[[-11,10.8],[17.9,10.8],[-11,-15],[10.4,-15],[10.4,10.6],[17.2,-5.4]].forEach(([x,z])=>plant(x,z,1.1));
+// lounge
+box(3.2,0.45,1.1,'#7c8db5',3.6,0.32,9.8); box(3.2,0.6,0.3,'#7c8db5',3.6,0.7,10.3); box(1.4,0.35,0.8,'#d6b48a',3.6,0.18,8.6);
+// whiteboard
+box(3.0,1.7,0.08,'#ffffff',-9.0,1.75,-15.6); box(3.1,0.08,0.14,'#9ca3af',-9.0,0.88,-15.55);
+// water cooler + shelf
+cyl(0.26,0.26,1.0,'#e5e7eb',9.6,0.5,-14.8,10); cyl(0.22,0.22,0.5,'#93c5fd',9.6,1.25,-14.8,10);
+box(2.4,1.8,0.5,'#cdb79a',6.5,0.9,-15.4); [0.45,1.1].forEach(y=>[-0.8,-0.2,0.5].forEach((dx,k)=>box(0.4,0.4,0.3,['#6d5dfc','#ff7a59','#14b8a6'][k],6.5+dx,y+0.25,-15.3)));
+
+// ---------------- monitor canvases ----------------
+const IMG={}; let imgLeft=0;
+for(const k in window.ASSETS){imgLeft++;const im=new Image();im.onload=()=>{imgLeft--;};im.src=window.ASSETS[k];IMG[k]=im;}
+function rr(x,X,Y,w,h,r,fill,stroke){x.beginPath();x.roundRect(X,Y,w,h,r);if(fill){x.fillStyle=fill;x.fill();}if(stroke){x.strokeStyle=stroke;x.lineWidth=3;x.stroke();}}
+function tx(x,s,X,Y,size,w=600,c='#141a2e',al='left'){x.font=`${w} ${size}px Inter, sans-serif`;x.fillStyle=c;x.textAlign=al;x.textBaseline='alphabetic';x.fillText(s,X,Y);}
+function cover(x,im,X,Y,w,h,r=0,ax=0.5,ay=0.5){if(!im)return;const s=Math.max(w/im.width,h/im.height);const sw=w/s,sh=h/s;x.save();if(r){x.beginPath();x.roundRect(X,Y,w,h,r);x.clip();}x.drawImage(im,(im.width-sw)*ax,(im.height-sh)*ay,sw,sh,X,Y,w,h);x.restore();}
+function contain(x,im,X,Y,w,h){if(!im)return;const s=Math.min(w/im.width,h/im.height);const dw=im.width*s,dh=im.height*s;x.drawImage(im,X+(w-dw)/2,Y+(h-dh)/2,dw,dh);}
+function chrome(x,title,accent){x.fillStyle='#f7f8fb';x.fillRect(0,0,1280,800);x.fillStyle='#ffffff';x.fillRect(0,0,1280,64);x.fillStyle='#e8eaf0';x.fillRect(0,63,1280,2);
+  ['#ff5f57','#febc2e','#28c840'].forEach((c,i)=>{x.beginPath();x.arc(30+i*26,32,8,0,7);x.fillStyle=c;x.fill();});
+  rr(x,120,16,32,32,9,accent); tx(x,title,166,42,26,700,'#141a2e');
+  rr(x,1080,16,170,32,16,'#eef0f5'); tx(x,'VYRA project',1165,39,17,700,'#6b7280','center');}
+function lines(x,L,X,Y,lh,size,w=500,c='#374151'){L.forEach((s,i)=>tx(x,s,X,Y+i*lh,size,w,c));}
+function check(x,X,Y,col){x.beginPath();x.arc(X,Y,15,0,7);x.fillStyle=col;x.fill();x.strokeStyle='#fff';x.lineWidth=4;x.beginPath();x.moveTo(X-7,Y);x.lineTo(X-2,Y+6);x.lineTo(X+8,Y-6);x.stroke();}
+
+const DRAW={
+ 0:(x,t)=>{chrome(x,'Launch plan · VYRA','#6d5dfc');tx(x,'VYRA launch plan',60,130,46,800);tx(x,'Home-fitness brand · one chat, one fixed order',60,172,24,500,'#6b7280');
+   const S=['Counseling brief','Market analysis','Knowledge base','Funnel','Logo · nine ideas','Brand Kit','Portrait','Website','YouTube · Long Video','Thumbnails','X · Instagram · Threads','TikTok · Facebook','SNS covers','Ads · waits for approval'];
+   S.forEach((s,i)=>{const col=i<7?0:1;const X=60+col*600,Y=230+(i%7)*76;rr(x,X,Y,560,62,14,'#fff');x.fillStyle='#e8eaf0';tx(x,String(i+1).padStart(2,'0'),X+22,Y+40,20,800,'#9ca3af');tx(x,s,X+70,Y+40,24,600);rr(x,X+430,Y+16,112,30,15,i<4?'#dcf5e4':'#eef0f5');tx(x,i<4?'Ready':'Queued',X+486,Y+38,17,800,i<4?'#15803d':'#6b7280','center');});},
+ 1:(x)=>{chrome(x,'Counseling · brand brief','#ff7a59');tx(x,'Brand brief',60,130,46,800);
+   const Q=[['Who is VYRA for?','Busy professionals who want to train at home.'],['What do you offer?','A 15-minute at-home training program.'],['How should it feel?','Energetic, warm and encouraging.'],['Where do people sign up?','Official LINE.']];
+   Q.forEach(([q,a],i)=>{const Y=180+i*148;rr(x,60,Y,1160,128,18,'#fff');tx(x,'Q',92,Y+52,26,900,'#ff7a59');tx(x,q,136,Y+52,28,700);tx(x,'A',92,Y+100,26,900,'#14b8a6');tx(x,a,136,Y+100,27,500,'#374151');});},
+ 2:(x)=>{chrome(x,'Market Analysis','#14b8a6');tx(x,'Home-fitness market',60,130,46,800);
+   const C=[['Gyms','Strong results, but travel and fixed hours.'],['Fitness apps','Many choices, easy to drop.'],['Free workout videos','Free, but no plan and no coach.']];
+   C.forEach(([a,b],i)=>{const X=60+i*395;rr(x,X,180,370,250,20,'#fff');rr(x,X+28,208,60,60,14,['#e0f2fe','#fef3c7','#fce7f3'][i]);tx(x,a,X+28,320,30,800);x.font='500 22px Inter';wrap(x,b,X+28,362,320,32,'#4b5563');});
+   rr(x,60,460,1160,280,22,'#141a2e');tx(x,'Opening for VYRA',100,520,24,700,'#ff9a76');tx(x,'Short routines that fit a workday,',100,590,42,800,'#fff');tx(x,'done at home.',100,645,42,800,'#fff');tx(x,'Positioning: "Fit into your life."',100,705,24,600,'#cbd5e1');},
+ 3:(x)=>{chrome(x,'Knowledge base','#f59e0b');tx(x,'VYRA knowledge',60,130,46,800);
+   const K=[['Brand','VYRA'],['Tagline','Move at Home. Fit into Your Life.'],['Offer','15-minute at-home training program'],['Audience','Busy professionals'],['Sign-up','Official LINE'],['Voice','Energetic · warm · encouraging']];
+   K.forEach(([a,b],i)=>{const X=60+(i%2)*590,Y=180+Math.floor(i/2)*190;rr(x,X,Y,560,166,20,'#fff');tx(x,a.toUpperCase(),X+30,Y+52,18,800,'#b7791f');x.font='700 30px Inter';wrap(x,b,X+30,Y+100,500,38,'#141a2e');});},
+ 4:(x)=>{chrome(x,'Funnel','#3b82f6');tx(x,'Customer path',60,130,46,800);
+   const F=[['SNS & Ads','People discover VYRA'],['Landing page','"Move First. Feel Strong."'],['Official LINE','They sign up'],['First workout','15 minutes at home']];
+   F.forEach(([a,b],i)=>{const Y=190+i*140,w=1160-i*120,X=60+i*60;rr(x,X,Y,w,112,20,['#dbeafe','#e0e7ff','#ede9fe','#fce7f3'][i]);tx(x,a,X+40,Y+50,32,800);tx(x,b,X+40,Y+88,23,500,'#4b5563');tx(x,String(i+1),X+w-50,Y+70,40,900,'#94a3b8','center');});},
+ 5:(x,t)=>{chrome(x,'Logo · nine ideas','#ec4899');x.fillStyle='#fff';x.fillRect(0,65,1280,735);
+   const im=IMG.logosheet; if(im){x.drawImage(im,0,40,1000,880,190,70,800*1000/1000*0.9,800*0.88*0.9);}
+   // grid geometry on the drawn sheet: drawn at (190,70) size 720 x 633.6 for src (0,40,1000,880)
+   const pick=ss(17.6,17.95,t); const sx=190,sy=70,sc=0.72; // src px -> dst
+   const cell=(c,r)=>({X:sx+(30+c*320)*sc, Y:sy+(85+r*290-40)*sc+ (r==0?10:0), W:300*sc, H:150*sc});
+   if(t<17.95){ const hv=[[0,0],[2,0],[1,1]]; const k=Math.floor(clamp((t-15.9)/0.42,0,2.99)); const [c,r]=t>16.9?[1,1]:hv[k]; const g=cell(c,r); x.strokeStyle='rgba(236,72,153,.55)';x.lineWidth=5;rr(x,g.X-8,g.Y-8,g.W+16,g.H+16,16,null,'rgba(236,72,153,.55)'); }
+   if(pick>0){const g=cell(1,1);x.lineWidth=6;rr(x,g.X-10,g.Y-10,g.W+20,g.H+20,18,null,'#ec4899');
+     rr(x,g.X+g.W-40,g.Y-30,150,44,22,'#ec4899');tx(x,'Picked',g.X+g.W+35,g.Y,22,800,'#fff','center');}
+   rr(x,930,700,320,70,20,t<18.05?'#ffe1d9':'#dcf5e4');tx(x,t<18.05?'Pick one of nine':'Logo chosen',1090,745,26,800,t<18.05?'#e4572e':'#15803d','center');},
+ 6:(x)=>{x.fillStyle='#fff';x.fillRect(0,0,1280,800);cover(x,IMG.brandboard,0,0,1280,800,0,0.5,0.0);},
+ 7:(x)=>{chrome(x,'Portrait · selfie to studio','#8b5cf6');cover(x,IMG.selfie,70,110,470,640,20,0.5,0.3);
+   x.fillStyle='#8b5cf6';x.beginPath();x.moveTo(600,400);x.lineTo(660,430);x.lineTo(600,460);x.fill();rr(x,575,422,40,16,6,'#8b5cf6');
+   cover(x,IMG.portrait,720,110,490,640,20,0.5,0.25);rr(x,740,680,250,50,25,'rgba(255,255,255,.92)');tx(x,'Studio portrait',865,714,24,800,'#141a2e','center');rr(x,90,680,190,50,25,'rgba(255,255,255,.92)');tx(x,'Your selfie',185,714,24,800,'#141a2e','center');},
+ 8:(x)=>{chrome(x,'vyra.fit · landing page','#22c55e');cover(x,IMG.website,0,65,1280,735,0,0.5,0.5);},
+ 9:(x)=>{chrome(x,'YouTube · VYRA channel','#ef4444');cover(x,IMG.cover3,0,65,1280,300,0,0.5,0.5);
+   rr(x,60,390,90,90,45,'#141a2e');contain(x,IMG.vyralogo,66,420,78,30);tx(x,'VYRA',170,432,36,800);tx(x,'15-minute workouts for busy days',170,470,22,500,'#6b7280');
+   [['thumb1','Move First. Feel Strong.'],['thumb2','Move at Home'],['thumb3','Busy Routine? Start Here']].forEach(([k,s],i)=>{const X=60+i*395;cover(x,IMG[k],X,510,370,208,14);tx(x,s,X,752,22,700);});},
+ 10:(x,t)=>{x.fillStyle='#1f2330';x.fillRect(0,0,1280,800);x.fillStyle='#2a2f3d';x.fillRect(0,0,1280,64);tx(x,'Long Video · editor',40,42,26,700,'#fff');
+   cover(x,IMG.pose1,330,90,620,400,10,0.5,0.25);rr(x,500,440,280,40,10,'rgba(0,0,0,.55)');tx(x,'Move first. Feel strong.',640,468,22,700,'#fff','center');
+   ['pose1','pose2','pose3','pose4','pose1','pose3'].forEach((k,i)=>cover(x,IMG[k],60+i*195,540,185,100,6,0.5,0.3));
+   rr(x,60,655,1160,34,6,'#3b82f6');tx(x,'Narration',75,678,18,700,'#fff');rr(x,60,700,700,34,6,'#a855f7');tx(x,'Captions',75,723,18,700,'#fff');rr(x,780,700,440,34,6,'#22c55e');tx(x,'Music',795,723,18,700,'#fff');
+   const ph=60+((t*90)%1160);x.fillStyle='#ff6a3d';x.fillRect(ph,530,4,215);},
+ 11:(x)=>{chrome(x,'Thumbnail · three options','#f97316');cover(x,IMG.thumb1,60,100,760,428,16);rr(x,60,100,760,428,16,null,'#f97316');rr(x,80,120,170,44,22,'#f97316');tx(x,'Option A',165,150,22,800,'#fff','center');
+   cover(x,IMG.thumb2,860,100,360,203,12);tx(x,'Option B',860,335,22,700);cover(x,IMG.thumb3,860,360,360,203,12);tx(x,'Option C',860,595,22,700);
+   tx(x,'Same title, three looks. You choose.',60,600,30,800);tx(x,'For "Move First. Feel Strong."',60,645,24,500,'#6b7280');},
+ 12:(x)=>{chrome(x,'Short Video · 9:16 clips','#10b981');cover(x,IMG.pose4,90,90,380,676,22,0.5,0.4);rr(x,120,620,320,90,14,'rgba(0,0,0,.5)');tx(x,'15 minutes.',280,656,30,900,'#fff','center');tx(x,'No gym.',280,694,30,900,'#ff9a76','center');
+   ['Clip 1 · Squat warm-up','Clip 2 · Desk-break stretch','Clip 3 · Core in 60 seconds'].forEach((s,i)=>{const Y=110+i*200;rr(x,530,Y,690,170,18,'#fff');cover(x,IMG[['pose3','pose2','pose1'][i]],548,Y+18,76,134,10,0.5,0.3);tx(x,s,650,Y+70,28,700);tx(x,'Vertical · captions · cut to the beat',650,Y+112,21,500,'#6b7280');});},
+ 13:(x)=>{x.fillStyle='#fff';x.fillRect(0,0,1280,800);tx(x,'X',60,70,40,900);x.fillStyle='#e5e7eb';x.fillRect(0,100,1280,2);
+   rr(x,60,130,80,80,40,'#141a2e');contain(x,IMG.vyralogo,66,156,68,26);tx(x,'VYRA',160,165,30,800);tx(x,'@vyra_fit',160,200,24,500,'#6b7280');
+   x.font='500 32px Inter';wrap(x,'Move first. Feel strong. A 15-minute at-home program for busy professionals — no gym, no commute.',60,270,1150,46,'#141a2e');
+   cover(x,IMG.covercity,60,350,1160,318,22);tx(x,'Reply   ·   Repost   ·   Like   ·   Share',60,730,24,600,'#6b7280');},
+ 14:(x)=>{x.fillStyle='#fff';x.fillRect(0,0,1280,800);rr(x,60,40,120,120,60,'#141a2e');contain(x,IMG.vyralogo,70,80,100,40);tx(x,'vyra.fit',210,90,34,800);tx(x,'Move at Home. Fit into Your Life.',210,135,24,500,'#4b5563');
+   ['mp1','adgirl','mp3','pose1','mp4','adbusy'].forEach((k,i)=>cover(x,IMG[k],60+(i%3)*392,190+Math.floor(i/3)*300,384,292,4,0.5,0.3));},
+ 15:(x)=>{x.fillStyle='#fff';x.fillRect(0,0,1280,800);tx(x,'Threads',60,72,36,900);
+   const P=[['Most days, 15 minutes is enough.','Short. At home. Done before the next meeting.'],['What stops you from training?','Time? Travel? Tell us — we build the routine around it.'],['Move first. Feel strong.','New routines every week for busy professionals.']];
+   P.forEach(([a,b],i)=>{const Y=120+i*225;rr(x,60,Y,72,72,36,'#141a2e');contain(x,IMG.vyralogo,64,Y+24,64,24);tx(x,'vyra.fit',150,Y+34,24,800);tx(x,a,150,Y+82,32,700);tx(x,b,150,Y+125,24,500,'#4b5563');x.fillStyle='#e5e7eb';x.fillRect(60,Y+190,1160,2);});},
+ 16:(x)=>{x.fillStyle='#111';x.fillRect(0,0,1280,800);cover(x,IMG.tiktok,410,0,460,800,0,0.5,0.5);tx(x,'Following   For You',640,50,24,800,'#fff','center');
+   [0,1,2].forEach(i=>{x.beginPath();x.arc(830,380+i*95,30,0,7);x.fillStyle='rgba(255,255,255,.85)';x.fill();});
+   tx(x,'@vyra_fit',100,620,30,800,'#fff');x.font='600 24px Inter';wrap(x,'15-minute squat routine you can do at home.',100,662,280,32,'#e5e7eb');tx(x,'TikTok',1180,60,28,900,'#fff','right');},
+ 17:(x)=>{x.fillStyle='#f0f2f5';x.fillRect(0,0,1280,800);x.fillStyle='#1877f2';x.fillRect(0,0,1280,60);tx(x,'facebook',40,44,32,900,'#fff');
+   cover(x,IMG.gcover1,0,60,1280,300,0,0.5,0.5);rr(x,60,300,140,140,70,'#fff');rr(x,68,308,124,124,62,'#141a2e');contain(x,IMG.vyralogo,78,356,104,34);tx(x,'VYRA',220,400,36,800);tx(x,'Home fitness · Move at Home. Fit into Your Life.',220,436,22,500,'#4b5563');
+   rr(x,60,470,1160,310,18,'#fff');cover(x,IMG.adbusy,80,490,270,270,12);tx(x,'Tired, stiff, out of sync?',380,560,32,800);tx(x,'Reset with 15 minutes of personal training at home.',380,606,24,500,'#4b5563');rr(x,380,660,200,54,12,'#1877f2');tx(x,'Learn more',480,696,22,800,'#fff','center');},
+ 18:(x)=>{chrome(x,'SNS Cover · concepts','#d946ef');[['gcover2','Concept 1'],['cover1','Concept 2'],['gcover3','Concept 3']].forEach(([k,s],i)=>{const Y=90+i*236;cover(x,IMG[k],60,Y,1160,200,16,0.5,0.5);rr(x,80,Y+14,150,38,19,'rgba(255,255,255,.92)');tx(x,s,155,Y+40,20,800,'#141a2e','center');});},
+ 19:(x,t)=>{chrome(x,'Ads · drafts','#ff6a3d');cover(x,IMG.adgirl,60,100,370,370,16);cover(x,IMG.adbusy,455,100,370,370,16);cover(x,IMG.banner,850,100,370,370,16,0.15,0.5);
+   const ok=t>=41.1;rr(x,60,500,1160,120,20,ok?'#dcf5e4':'#ffe1d9');tx(x,ok?'Approved by you':'Waiting for your approval',100,572,38,800,ok?'#15803d':'#e4572e');tx(x,ok?'Spend: on':'Spend: off',1180,572,30,800,ok?'#15803d':'#e4572e','right');
+   tx(x,'3 drafts · Meta & Google · nothing spends until you approve',60,690,26,600,'#4b5563');},
+};
+function wrap(x,s,X,Y,maxW,lh,c){x.fillStyle=c||x.fillStyle;x.textAlign='left';const w=s.split(' ');let line='',yy=Y;for(const word of w){const tt=line?line+' '+word:word;if(x.measureText(tt).width>maxW&&line){x.fillText(line,X,yy);line=word;yy+=lh;}else line=tt;}if(line)x.fillText(line,X,yy);}
+const ANIM={0:false,5:true,10:true,19:true};
+
+// ---------------- desks + robots ----------------
+const DESKS=[];
+function makeDesk(r){
+  const g=new T.Group(); g.position.set(r.x,0,r.z); scene.add(g);
+  // desk (monitor side at -z), robot at +z
+  box(2.2,0.08,1.1,'#e9d8bf',0,0.76,-0.2,g); [[-1,-0.65],[1,-0.65],[-1,0.25],[1,0.25]].forEach(([a,b])=>box(0.07,0.74,0.07,'#9a8b77',a,0.37,b,g));
+  box(0.6,0.03,0.2,'#2b2f3a',0,0.815,0.08,g); cyl(0.07,0.06,0.14,'#ffffff',0.75,0.87,0.0,8,g);
+  // monitor
+  box(0.08,0.36,0.06,'#30343f',0,0.98,-0.55,g); box(0.42,0.03,0.22,'#30343f',0,0.81,-0.55,g);
+  box(1.42,0.9,0.06,'#22252e',0,1.53,-0.6,g);
+  const c=document.createElement('canvas'); c.width=1280; c.height=800;
+  const tex=new T.CanvasTexture(c); tex.colorSpace=T.SRGBColorSpace; tex.anisotropy=8; tex.generateMipmaps=true;
+  const scr=new T.Mesh(new T.PlaneGeometry(1.32,0.825),new T.MeshBasicMaterial({map:tex,toneMapped:false})); scr.position.set(0,1.53,-0.565); g.add(scr);
+  // chair
+  const ch=new T.Group(); ch.position.set(0,0,0.85); g.add(ch);
+  box(0.62,0.1,0.58,'#3f4656',0,0.5,0,ch); box(0.62,0.66,0.1,'#3f4656',0,0.86,0.3,ch); cyl(0.04,0.04,0.42,'#6b7280',0,0.25,0,6,ch);
+  for(let k=0;k<5;k++){const a=k*Math.PI*2/5;const m=box(0.36,0.04,0.06,'#6b7280',Math.sin(a)*0.16,0.05,Math.cos(a)*0.16,ch);m.rotation.y=a+Math.PI/2;}
+  // robot
+  const rb=new T.Group(); rb.position.set(0,0.55,0.8); g.add(rb);
+  const col=r.color;
+  const torso=new T.Mesh(new T.CapsuleGeometry(0.25,0.32,3,8),M(col)); torso.position.y=0.42; torso.castShadow=true; rb.add(torso);
+  const belly=new T.Mesh(new T.CylinderGeometry(0.2,0.2,0.04,10),M('#f8fafc')); belly.rotation.x=Math.PI/2; belly.position.set(0,0.42,-0.24); rb.add(belly);
+  const neck=new T.Mesh(new T.CylinderGeometry(0.07,0.07,0.1,8),M('#cbd5e1')); neck.position.y=0.82; rb.add(neck);
+  const head=new T.Group(); head.position.y=1.03; rb.add(head);
+  const hm=new T.Mesh(new T.IcosahedronGeometry(0.25,1),M('#f1f5f9')); hm.castShadow=true; head.add(hm);
+  const visor=new T.Mesh(new T.BoxGeometry(0.34,0.15,0.1),M('#1e293b')); visor.position.set(0,0.0,-0.2); head.add(visor);
+  const eyeM=new T.MeshBasicMaterial({color:'#67e8f9'});
+  [-0.07,0.07].forEach(dx=>{const e=new T.Mesh(new T.SphereGeometry(0.028,8,6),eyeM);e.position.set(dx,0.0,-0.26);head.add(e);});
+  const ear=(s)=>{const e=new T.Mesh(new T.CylinderGeometry(0.06,0.06,0.06,8),M(col));e.rotation.z=Math.PI/2;e.position.set(s*0.26,0,0);head.add(e);}; ear(1);ear(-1);
+  const ant=new T.Mesh(new T.CylinderGeometry(0.012,0.012,0.18,5),M('#94a3b8')); ant.position.y=0.31; head.add(ant);
+  const bulbM=new T.MeshBasicMaterial({color:'#f59e0b'}); const bulb=new T.Mesh(new T.SphereGeometry(0.055,10,8),bulbM); bulb.position.y=0.42; head.add(bulb);
+  const arm=(s)=>{const sh=new T.Group(); sh.position.set(s*0.31,0.62,0); rb.add(sh); const up=new T.Mesh(new T.CapsuleGeometry(0.065,0.3,2,6),M(col)); up.position.y=-0.2; up.castShadow=true; sh.add(up); const hand=new T.Mesh(new T.SphereGeometry(0.075,8,6),M('#e2e8f0')); hand.position.y=-0.42; sh.add(hand); return sh;};
+  const aL=arm(-1), aR=arm(1);
+  const d={r,g,tex,canvas:c,ctx:c.getContext('2d'),head,bulbM,aL,aR,rb,drawn:false};
+  DESKS.push(d); return d;
+}
+ROSTER.forEach(makeDesk);
+const STC={working:'#f59e0b',done:'#22c55e',needs:'#ff5a36'};
+
+function drawDesk(d,t){ d.ctx.save(); DRAW[d.r.i](d.ctx,t); d.ctx.restore(); d.tex.needsUpdate=true; }
+let fontsReady=false, drawnStatic=false;
+
+// ---------------- camera path ----------------
+function stop(i){const r=ROSTER[i];
+  if(r.row===3) return {p:[r.x+0.7,2.35,r.z+3.9],l:[r.x-0.35,1.3,r.z-0.6],f:46};
+  if(r.row===4) return {p:[r.x+2.35,2.15,r.z+3.2],l:[r.x+1.05,1.3,r.z-0.5],f:46};
+  return {p:[r.x+1.12,2.18,r.z+1.95],l:[r.x-0.1,1.42,r.z-0.6],f:42};}
+const K=[];
+const key=(t,p,l,f)=>K.push({t,p,l,f});
+key(0,[-21,23,27],[2,0,-3],40);
+key(5.2,[2,21,27],[2,0,-2.5],40);
+key(8.0,[-3,9.5,17.5],[-5,0.8,4],44);
+const add=(i,t,mod)=>{const s=stop(i);let p=s.p.slice(),l=s.l.slice();if(mod)mod(p,l);key(t,p,l,s.f);};
+for(let i=0;i<19;i++){
+  const r=ROSTER[i];
+  if(i===5){ add(5,16.05); add(5,18.3,(p,l)=>{p[0]-=0.35;p[1]-=0.12;p[2]-=0.55;}); continue; }
+  if(i>0 && ROSTER[i-1].row!==r.row){ const a=stop(i-1),b=stop(i),tm=(ROSTER[i-1].c+(i===5?16.05:r.c))/2; if(i!==5) key(tm,[(a.p[0]+b.p[0])/2,Math.max(a.p[1],b.p[1])+1.4,(a.p[2]+b.p[2])/2],[(a.l[0]+b.l[0])/2,1.0,(a.l[2]+b.l[2])/2],(a.f+b.f)/2); }
+  add(i,r.c);
+}
+// brand row transition (12 -> 13)
+{ const a=stop(4),b=stop(5); key(15.45,[(a.p[0]+b.p[0])/2,a.p[1]+1.4,(a.p[2]+b.p[2])/2],[(a.l[0]+b.l[0])/2,1.0,(a.l[2]+b.l[2])/2],42); }
+key(31.0,[-6,8,-1],[0,0.5,-9],50);
+key(33.0,[-9,21,19],[3,0,-3.5],42);
+key(34.9,[-3,20,19],[5,0,-3.5],42);
+add(19,36.9); add(19,43.3,(p,l)=>{p[0]+=0.45;p[2]-=0.15;p[1]+=0.2;});
+key(44.4,[14.8,6.8,2.6],[8,0,-6],44);
+key(46.2,[-14,24,26],[3,0,-3],40);
+key(49.0,[-16,30,30],[3,0,-3],40);
+key(DUR+1,[-17,32,31],[3,0,-3],40);
+K.sort((a,b)=>a.t-b.t);
+function hermite(arr,t,get){
+  let i=0; while(i<arr.length-2 && t>arr[i+1].t) i++;
+  const a=arr[i],b=arr[i+1]; const h=b.t-a.t; let u=clamp((t-a.t)/h);
+  const prev=arr[Math.max(0,i-1)], next=arr[Math.min(arr.length-1,i+2)];
+  const va=get(a), vb=get(b), vp=get(prev), vn=get(next);
+  const out=[];
+  for(let k=0;k<va.length;k++){
+    let ma=(i===0)?0:(vb[k]-vp[k])/(b.t-prev.t); let mb=(i+2>=arr.length)?0:(vn[k]-va[k])/(next.t-a.t);
+    // damp tangents when segment direction disagrees (avoid overshoot)
+    const sl=(vb[k]-va[k])/h; if(ma*sl<=0)ma=0; if(mb*sl<=0)mb=0; ma=Math.max(-3*Math.abs(sl),Math.min(3*Math.abs(sl),ma)); mb=Math.max(-3*Math.abs(sl),Math.min(3*Math.abs(sl),mb));
+    const u2=u*u,u3=u2*u;
+    out.push((2*u3-3*u2+1)*va[k]+(u3-2*u2+u)*h*ma+(-2*u3+3*u2)*vb[k]+(u3-u2)*h*mb);
+  }
+  return out;
+}
+function camAt(t){const p=hermite(K,t,k=>k.p),l=hermite(K,t,k=>k.l),f=hermite(K,t,k=>[k.f])[0];return {p,l,f};}
+
+// ---------------- overlay ----------------
+const ov=document.getElementById('ov');
+const ICON={working:'<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-dasharray="20 12"/></svg>',
+ done:'<svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="#16a34a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ needs:'<svg width="14" height="16" viewBox="0 0 14 16"><path d="M7 1.5v8M7 13.2v.3" stroke="#e4572e" stroke-width="2.8" stroke-linecap="round"/></svg>'};
+const LBL={working:'Working',done:'Done',needs:'Needs you'};
+const chips=ROSTER.map(r=>{const e=document.createElement('div');e.className='chip working';ov.appendChild(e);return e;});
+function el(html){const d=document.createElement('div');d.innerHTML=html;const e=d.firstElementChild;ov.appendChild(e);return e;}
+const wash=el('<div style="position:absolute;left:0;right:0;top:0;height:560px;background:linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,0))"></div>');
+const title=el('<div class="title"></div>');
+const compose=el(`<div class="compose"><div class="bubble" style="top:-96px">Launch VYRA, our home-fitness brand.</div>
+ <div class="reply" style="top:-96px"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b"></span>Project Manager is planning the order…</div>
+ <div class="cbox"><span class="txt"></span><span class="send"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div>`);
+const cBubble=compose.querySelector('.bubble'), cReply=compose.querySelector('.reply'), cTxt=compose.querySelector('.txt');
+const cap=el('<div class="cap"></div>');
+const desk=el('<div class="desk"><div class="num"></div><div><div class="t1"></div><div class="t2"></div><div class="t3"></div></div></div>');
+const legend=el(`<div class="legend">${['working','done','needs'].map(s=>`<div class="chip ${s}"><span class="ic">${ICON[s]}</span><span class="st">${LBL[s]}</span></div>`).join('')}</div>`);
+const legendChips=[...legend.children];
+const modal=el(`<div class="modal"><div class="hd"><span style="width:44px;height:44px;border-radius:12px;background:#ff6a3d;color:#fff;display:grid;place-items:center;font-weight:900">42</span>Ads<span class="tag"></span></div>
+ <h2>3 ad drafts are ready for VYRA</h2>
+ <div class="th"><img src="../en-pack/ad-en-vyra-girl.jpg" style="width:150px"><img src="../en-pack/ad-en-busy-routine.jpg" style="width:150px"><img src="../en-pack/banner-en.jpg" style="width:260px;object-position:15% 50%"></div>
+ <div class="row"><span>Spend</span><b class="sp"></b></div>
+ <div class="btns"><div class="btn" style="background:#f1f2f5;color:#374151">Edit</div><div class="btn ap"></div></div></div>`);
+const mTag=modal.querySelector('.tag'), mSp=modal.querySelector('.sp'), mAp=modal.querySelector('.ap');
+const cursor=el('<svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l15 9-6.5 1.6L16 20l-2.8 1.3-3.4-7.3L4 18z" fill="#141a2e" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+const end=el('<div class="end"><img src="../en-pack/aimy-logo-dark.png" alt="AIMY"><div class="l1">A company of AI employees in one chat.</div><div class="l2">52 AI employees · One chat · You approve what matters</div></div>');
+const endImg=end.querySelector('img');
+
+const CAPS=[
+ [5.5,10.0,'Every employee has a desk.','They work in a <span class="a">fixed order.</span>'],
+ [10.1,15.4,'Strategy first.','Plan · Counseling · <span class="a">Market</span>'],
+ [15.6,18.45,'Logo drafts nine ideas.','<span class="a">You pick one.</span>'],
+ [18.6,21.9,'Then Brand Kit, Portrait','and <span class="a">Website.</span>'],
+ [22.1,30.3,'Video, thumbnails,','<span class="a">every social channel.</span>'],
+ [36.6,43.6,'Nothing spends','<span class="a">until you approve.</span>'],
+ [43.9,47.4,'52 AI employees.','<span class="a">One chat.</span>'],
+];
+let capKey='';
+function setHTML(e,h){if(e._h!==h){e.innerHTML=h;e._h=h;}}
+const v3=new T.Vector3();
+
+window.seek=function(t){
+  if(!fontsReady && document.fonts && document.fonts.check('800 30px Inter')) fontsReady=true;
+  if(!drawnStatic && imgLeft===0){ DESKS.forEach(d=>drawDesk(d,t)); drawnStatic=true; for(const L of LABELS){} }
+  if(drawnStatic && fontsReady && !window._redrawn){ DESKS.forEach(d=>drawDesk(d,t)); relabel(); window._redrawn=true; }
+  if(drawnStatic) for(const k in ANIM){ const d=DESKS[k]; if(k==5 && (t<15 || t>19.5)) { if(d._lt!=='x'+(t>19.5)){drawDesk(d,t);d._lt='x'+(t>19.5);} continue; } if(k==19 && Math.abs(t-41.1)>3 && d._lt===(t>41.1)) continue; drawDesk(d,t); d._lt=(t>41.1); }
+  // camera
+  const c=camAt(t); cam.position.set(...c.p); cam.lookAt(...c.l); cam.fov=c.f; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+  // robots
+  DESKS.forEach((d,i)=>{const st=status(i,t); d.bulbM.color.set(STC[st]); const ph=i*1.7;
+    d.head.rotation.y=Math.sin(t*0.8+ph)*0.12; d.head.rotation.x=0.12+Math.sin(t*1.3+ph)*0.03;
+    if(st==='working'){ d.aL.rotation.set(-1.15+Math.sin(t*15+ph)*0.09,0,0.12); d.aR.rotation.set(-1.15+Math.sin(t*15+ph+1.6)*0.09,0,-0.12); d.rb.position.y=0.55; }
+    else if(st==='done'){ d.aL.rotation.set(-0.95,0,0.18); d.aR.rotation.set(-0.95,0,-0.18); d.head.rotation.x=-0.08; d.rb.position.y=0.55+Math.abs(Math.sin(t*3+ph))*0.012; }
+    else { d.aL.rotation.set(-1.1,0,0.12); d.aR.rotation.set(0,0,2.6+Math.sin(t*7)*0.25); d.head.rotation.x=-0.15; d.rb.position.y=0.56+Math.abs(Math.sin(t*7))*0.02; }
+  });
+  R.render(scene,cam);
+
+  // chips
+  const camY=c.p[1]; const over=ss(6,10,camY);
+  DESKS.forEach((d,i)=>{const e=chips[i]; const r=d.r; const st=status(i,t);
+    v3.set(r.x,2.35,r.z-0.6).project(cam); const sx=(v3.x*0.5+0.5)*1920, sy=(-v3.y*0.5+0.5)*1080;
+    const dist=Math.hypot(c.p[0]-r.x,c.p[1]-2.3,c.p[2]-(r.z-0.6));
+    let a=Math.max(over, 1-ss(5.5,8.5,dist)); a*=ss(6.3+i*0.05,6.8+i*0.05,t); if(v3.z>1||v3.z<-1) a=0;
+    if(t>47.6) a*=1-ss(47.6,48.2,t);
+    // in the ads beat hide other chips
+    if(t>35.6&&t<44&&i!==19) a*=1-ss(35.6,36.2,t)*(1-ss(43.3,43.9,t));
+    if(a<0.02){e.style.opacity=0;return;}
+    const sc=lerp(1.12,0.78,over)*(st==='needs'?1.25:1);
+    const lbl=(i===19&&st==='done')?'Approved':LBL[st];
+    setHTML(e,`<span class="ic">${ICON[st]}</span><span class="n">${r.n}</span>${r.name}<span class="st">· ${lbl}</span>`);
+    e.className='chip '+st; e.style.opacity=a;
+    const w=e.offsetWidth; const edge=ss(10,50,sx-w*sc/2)*ss(10,50,1920-(sx+w*sc/2))*ss(10,40,sy-50*sc)*ss(10,40,1080-sy); if(edge<0.02){e.style.opacity=0;return;} e.style.opacity=a*edge; e.style.transform=`translate(${sx-w/2}px,${sy-50*sc}px) scale(${sc})`;
+    e.style.zIndex=Math.round(1000-dist*10);
+  });
+
+  // title + composer (intro)
+  const tA=fade(t,0.3,5.6,0.5);
+  title.style.opacity=tA; wash.style.opacity=tA; setHTML(title,'A company of AI employees<br><span class="a">in one chat.</span>');
+  title.style.transform=`translateY(${(1-ss(0.3,1.0,t))*24}px)`;
+  const cA=fade(t,0.9,5.7,0.45); compose.style.opacity=cA; compose.style.transform=`translateY(${(1-ss(0.9,1.4,t))*30}px)`;
+  const msg='Launch VYRA, our home-fitness brand.'; const nch=Math.floor(clamp((t-1.3)/1.5)*msg.length);
+  const sent=t>3.15;
+  setHTML(cTxt, sent?'<span class="ph">Message Amy…</span>':(nch?msg.slice(0,nch)+'<span class="caret"></span>':'<span class="ph">Message Amy…</span>'));
+  cBubble.style.opacity=ss(3.15,3.4,t); cBubble.style.transform=`translateY(${(1-ss(3.15,3.5,t))*40 - ss(3.9,4.2,t)*84}px)`;
+  cReply.style.opacity=ss(3.95,4.25,t); cReply.style.transform=`translateY(${(1-ss(3.95,4.3,t))*30}px)`;
+
+  // captions
+  let ck=''; let ca=0;
+  for(const [a,b,l1,l2] of CAPS){ if(t>=a-0.05&&t<=b+0.05){ ck=l1+'<br>'+l2; ca=fade(t,a,b,0.3);} }
+  setHTML(cap,ck); cap.style.opacity=ck?ca:0; cap.style.transform=`translateY(${(1-ca)*16}px)`;
+
+  // desk card
+  let di=-1; if(t>=9.9&&t<30.4){ let best=1e9; for(let i=0;i<19;i++){const dd=Math.abs(t-(i===5?16.95:ROSTER[i].c)); if(dd<best){best=dd;di=i;}} }
+  if(t>=35.9&&t<43.6) di=19;
+  if(di>=0){ const r=ROSTER[di]; desk.style.opacity=di===19?fade(t,35.9,43.6,0.3):fade(t,9.9,30.4,0.3);
+    setHTML(desk.querySelector('.num'),r.n); desk.querySelector('.num').style.background=r.color;
+    setHTML(desk.querySelector('.t1'),r.name); setHTML(desk.querySelector('.t2'),r.d); setHTML(desk.querySelector('.t3'),`Employee ${r.n} of 52`);
+  } else desk.style.opacity=0;
+
+  // legend (overview)
+  const lA=fade(t,31.1,35.7,0.35); legend.style.opacity=lA;
+  const hl=[[32.6,33.4],[33.45,34.3],[34.35,35.7]];
+  legendChips.forEach((e,k)=>{const on=ss(hl[k][0],hl[k][0]+0.15,t)*(k<2?(1-ss(hl[k][1],hl[k][1]+0.15,t)):1); e.style.transform=`scale(${1+on*0.14})`; e.style.background=on>0.5?'#fff':'#f6f7f9'; e.style.boxShadow=on>0.5?'0 6px 20px rgba(20,26,46,.18)':'none'; e.style.opacity=0.55+0.45*Math.max(on, t<32.6?1:0);});
+
+  // approval modal
+  const mA=fade(t,37.0,43.6,0.4); modal.style.opacity=mA; modal.style.transform=`translateY(${(1-ss(37.0,37.5,t))*30}px)`;
+  const ok=t>=41.1;
+  setHTML(mTag, ok?'Approved':'Needs you'); mTag.style.background=ok?'#dcf5e4':'#ffe1d9'; mTag.style.color=ok?'#15803d':'#e4572e';
+  setHTML(mSp, ok?'<span style="color:#15803d">Approved by you</span>':'<span style="color:#e4572e">Off until you approve</span>');
+  setHTML(mAp, ok?'Approved ✓':'Approve'); mAp.style.background=ok?'#22c55e':'#141a2e'; mAp.style.color='#fff';
+  const press=ss(40.95,41.05,t)*(1-ss(41.1,41.25,t)); mAp.style.transform=`scale(${1-press*0.06})`;
+  // cursor path to Approve button
+  const br=mAp.getBoundingClientRect(); const tx0=1500,ty0=1010; const tx1=br.left+br.width*0.55, ty1=br.top+br.height*0.55;
+  const cu=ss(39.6,40.85,t); cursor.style.opacity=fade(t,39.3,42.4,0.3); cursor.style.transform=`translate(${lerp(tx0,tx1,cu)}px,${lerp(ty0,ty1,cu)}px) scale(${1-press*0.15})`;
+
+  // end card
+  const eA=ss(47.4,48.1,t); end.style.opacity=eA; endImg.style.transform=`scale(${0.94+0.06*ss(47.4,49.2,t)})`;
+  end.querySelector('.l1').style.opacity=ss(48.4,48.9,t); end.querySelector('.l2').style.opacity=ss(49.0,49.5,t);
+};
+function relabel(){ /* floor labels drawn at init; redraw when fonts become ready */
+  for(const L of LABELS){const x=L.tt.ctx,c=L.tt.canvas;x.clearRect(0,0,c.width,c.height);x.fillStyle=L.color;x.font='800 110px Inter, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(L.str,c.width/2,c.height/2+4);L.tt.tex.needsUpdate=true;}
+}
+window.seek(0);
+})();
+</script>
+</body></html>

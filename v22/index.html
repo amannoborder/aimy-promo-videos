@@ -1,0 +1,453 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#faf8f6}
+body{font-family:'Inter',system-ui,sans-serif;color:#141218;letter-spacing:-.02em}
+#stage{position:absolute;inset:0;overflow:hidden;background:#faf8f6}
+.abs{position:absolute;left:0;top:0}
+.blob{position:absolute;border-radius:50%;filter:blur(120px);opacity:.16}
+.grad{background:linear-gradient(100deg,#FF8A1F,#FF4B61 50%,#FF2DBA)}
+.gtext{background:linear-gradient(100deg,#FF8A1F,#FF4B61 50%,#FF2DBA);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mk{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .04em .08em}
+.mk>span{display:inline-block;will-change:transform}
+/* hook */
+#hook{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:136px;font-weight:700;letter-spacing:-.055em;line-height:1.08}
+#hook .ln{white-space:nowrap}
+#chatw{color:#fff;border-radius:80px;padding:0 .26em .04em}
+#morph{position:absolute;z-index:8;overflow:hidden;display:none}
+#morph .g{position:absolute;inset:0}
+#morph .tx{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:136px;font-weight:700;letter-spacing:-.055em}
+/* app */
+#app{position:absolute;left:0;top:0;width:1560px;height:860px;border-radius:24px;background:#fff;box-shadow:0 40px 120px rgba(40,20,60,.16),0 0 0 1px rgba(20,10,30,.06);overflow:hidden;z-index:9;transform-origin:50% 50%}
+#side{position:absolute;left:0;top:0;bottom:0;width:270px;background:#f6f5f8;border-right:1px solid #ebe8ef;padding:26px 18px}
+#side img{width:92px;height:auto;display:block;margin:0 0 22px 6px}
+.nb{height:44px;border-radius:12px;background:#fff;border:1px solid #e6e2ec;display:flex;align-items:center;padding:0 14px;font-size:16px;font-weight:600;gap:10px}
+.sl{font-size:12px;font-weight:700;color:#9a94a5;letter-spacing:.08em;margin:22px 6px 8px}
+.si{height:36px;border-radius:10px;display:flex;align-items:center;padding:0 10px;font-size:15px;font-weight:500;color:#3d3846;gap:10px}
+.si.on{background:#ece8f2;font-weight:700}
+.num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:22px;border-radius:11px;font-size:12px;font-weight:700;color:#fff;letter-spacing:0}
+#mainh{position:absolute;left:270px;right:0;top:0;height:64px;border-bottom:1px solid #eeebf1;display:flex;align-items:center;padding:0 30px;gap:14px}
+#mainh b{font-size:19px}
+#mainh span{font-size:15px;color:#837d8d;font-weight:500}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;margin-right:6px}
+#msgs{position:absolute;left:465px;width:900px;top:64px;height:680px}
+.ub{position:absolute;right:0;top:30px;border-radius:22px 22px 6px 22px;padding:14px 22px;font-size:21px;font-weight:600;color:#fff}
+#pm{position:absolute;left:0;top:104px;width:900px}
+.av{width:44px;height:44px;border-radius:50%;color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;letter-spacing:0;flex:0 0 44px}
+#pm .hd{display:flex;gap:14px;align-items:center}
+#pm .nm{font-size:15px;font-weight:700;color:#7b7486}
+#pm .tx{font-size:21px;font-weight:600;margin-top:2px}
+#plan{position:absolute;left:58px;top:70px;width:780px;height:350px;border-radius:18px;border:1px solid #ebe7f0;background:#fcfbfd;padding:22px 26px}
+#plan .pt{font-size:14px;font-weight:700;color:#9a94a5;letter-spacing:.08em}
+.pi{position:absolute;width:350px;height:40px;display:flex;align-items:center;gap:12px;font-size:18px;font-weight:600}
+.pi .ck{margin-left:auto;width:24px;height:24px;border-radius:50%;background:#22c55e;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center}
+#plan .pf{position:absolute;left:26px;bottom:18px;font-size:16px;font-weight:600;color:#6d6678}
+#run{position:absolute;left:58px;top:440px;height:52px;padding:0 30px;border-radius:26px;color:#fff;font-size:19px;font-weight:700;display:flex;align-items:center}
+#typing{position:absolute;left:0;top:104px;display:flex;gap:6px;padding:16px 20px;border-radius:18px;background:#f3f1f6}
+#typing i{width:9px;height:9px;border-radius:50%;background:#9a94a5;display:block}
+#comp{position:absolute;left:465px;width:900px;top:756px;height:66px;border-radius:33px;background:#f4f2f7;border:1px solid #e9e5ee;display:flex;align-items:center;padding:0 10px 0 28px;font-size:20px;font-weight:500;color:#a39dad}
+#comp .tx{flex:1;white-space:nowrap;color:#141218}
+#comp .ph{flex:1;white-space:nowrap}
+#caret{display:inline-block;width:2px;height:24px;background:#FF4B61;vertical-align:middle;margin-left:2px}
+#send{width:48px;height:48px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+#cursor{position:absolute;z-index:80;width:36px;height:36px;left:0;top:0;pointer-events:none}
+#clickr{position:absolute;z-index:79;width:60px;height:60px;border-radius:50%;border:3px solid #FF4B61;left:0;top:0;opacity:0}
+/* wall */
+#wallS{position:absolute;inset:0;z-index:20;background:#f4f2ef;display:none}
+#cam{position:absolute;left:0;top:0;width:3000px;height:1880px;transform-origin:0 0}
+.tile{position:absolute;width:560px;height:420px}
+.tl{height:40px;display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.tl .n{font-size:16px;font-weight:800;letter-spacing:0}
+.tb{position:absolute;left:0;top:52px;width:560px;height:360px;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 18px 50px rgba(40,20,60,.10),0 0 0 1px rgba(20,10,30,.05)}
+.tb img.cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ring{position:absolute;left:-6px;top:46px;width:572px;height:372px;border-radius:22px;border:4px solid #FF4B61;opacity:0}
+.badge{position:absolute;right:-14px;top:30px;height:44px;border-radius:22px;padding:0 18px 0 14px;color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;opacity:0;letter-spacing:0}
+.h{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.s{font-size:14px;font-weight:600;color:#8b8496}
+.row{display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;height:28px;border-radius:14px;padding:0 12px;font-size:13px;font-weight:700;background:#f2eff5;color:#5c5566;letter-spacing:0}
+#scan{position:absolute;top:-80px;width:8px;height:2040px;border-radius:4px;opacity:0}
+#scanb{position:absolute;top:-80px;width:420px;height:2040px;opacity:0;background:linear-gradient(90deg,rgba(255,75,97,0),rgba(255,75,97,.10))}
+#cring{position:absolute;z-index:21;border-radius:50%;border:3px solid #FF4B61;display:none}
+/* carousel */
+#carS{position:absolute;inset:0;z-index:30;display:none;perspective:2000px;perspective-origin:50% 30%;background:linear-gradient(#faf8f6 0,#faf8f6 74%,#f0ede9 74.2%,#f7f5f2 100%)}
+#ring3{position:absolute;left:960px;top:800px;transform-style:preserve-3d}
+.cc{position:absolute;left:0;top:0;transform-style:preserve-3d}
+.cf{position:absolute;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(40,20,60,.16)}
+.cf img{position:absolute;width:100%;height:100%;object-fit:cover}
+.rf{position:absolute;border-radius:14px;overflow:hidden;transform:scaleY(-1);opacity:.32;-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0) 45%);mask-image:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0) 45%)}
+.rf img{position:absolute;width:100%;height:100%;object-fit:cover}
+.prof{position:absolute;inset:0;background:#fff}
+.prof .cov{position:absolute;left:0;top:0;width:100%;height:175px;object-fit:cover}
+.prof .pav{position:absolute;left:26px;top:130px;width:96px;height:96px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px #fff,0 4px 12px rgba(0,0,0,.15);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.prof .pav img{position:static;width:80px;height:auto;object-fit:contain}
+.prof .pn{position:absolute;left:28px;top:240px;font-size:28px;font-weight:800}
+.prof .ps{position:absolute;left:28px;top:280px;font-size:18px;font-weight:600;color:#8b8496}
+.prof .pb{position:absolute;right:24px;top:192px;height:42px;border-radius:21px;padding:0 22px;font-size:17px!important;background:#141218;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center}
+#hero{position:absolute;z-index:45;overflow:hidden;display:none;background:#000}
+#hero img{position:absolute;width:100%;height:100%;object-fit:cover}
+#carT{position:absolute;left:0;right:0;top:56px;text-align:center;font-size:76px;font-weight:700;letter-spacing:-.05em;z-index:31}
+/* phone + panel */
+#phS{position:absolute;inset:0;z-index:40;display:none}
+#phone{position:absolute;left:430px;top:110px;width:420px;height:860px;border-radius:62px;background:#111014;box-shadow:0 50px 110px rgba(40,20,60,.22),0 0 0 2px #2b2930 inset}
+#island{position:absolute;left:50%;top:26px;width:110px;height:32px;border-radius:16px;background:#111014;transform:translateX(-50%);z-index:47}
+#phui{position:absolute;left:442px;top:122px;width:396px;height:836px;border-radius:50px;z-index:46;overflow:hidden;pointer-events:none}
+#phui .tg{position:absolute;left:20px;top:70px;height:32px;border-radius:16px;padding:0 14px;background:rgba(255,255,255,.92);font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;letter-spacing:0}
+#head2{position:absolute;left:1000px;top:66px;font-size:66px;font-weight:700;letter-spacing:-.05em;line-height:1.04;z-index:41}
+#pwrap{position:absolute;left:1000px;top:300px;width:640px;height:600px;perspective:2200px;z-index:41}
+#pflip{position:absolute;inset:0;transform-style:preserve-3d}
+.face{position:absolute;inset:0;border-radius:26px;background:#fff;box-shadow:0 40px 90px rgba(40,20,60,.16),0 0 0 1px rgba(20,10,30,.06);backface-visibility:hidden;-webkit-backface-visibility:hidden;padding:30px 32px}
+#back{transform:rotateY(180deg)}
+.btn{height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700}
+.res{position:absolute;width:180px;height:150px}
+.res .im{position:absolute;left:0;top:0;width:180px;height:118px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px #ece8f0}
+.res .im img{position:absolute;width:100%;height:100%;object-fit:cover}
+.res .lb{position:absolute;left:2px;top:124px;font-size:15px;font-weight:700;display:flex;gap:6px;align-items:center}
+.res .lb i{font-style:normal;color:#22c55e}
+/* stats */
+#stS{position:absolute;inset:0;z-index:50;display:none;background:#faf8f6}
+.big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:40px}
+.big .n{font-size:400px;font-weight:800;letter-spacing:-.07em;line-height:1}
+.big .w{font-size:96px;font-weight:700;letter-spacing:-.05em;line-height:1}
+#tick{position:absolute;left:0;top:940px;white-space:nowrap;font-size:36px;font-weight:600;color:#8b8496;letter-spacing:-.02em}
+#tick b{color:#141218;font-weight:700}
+/* end */
+#endS{position:absolute;inset:0;z-index:60;display:none;background:#faf8f6}
+#elogo{position:absolute;left:680px;top:230px;width:560px;height:auto}
+#etag{position:absolute;left:0;right:0;top:700px;text-align:center;font-size:44px;font-weight:600;color:#3a3542;letter-spacing:-.03em}
+</style></head>
+<body><div id="stage">
+<svg width="0" height="0" style="position:absolute"><filter id="mb" x="-20%" y="-5%" width="140%" height="110%"><feGaussianBlur id="mbg" stdDeviation="0 0"/></filter></svg>
+<div class="blob" id="b1" style="width:900px;height:900px;background:#FFB000"></div>
+<div class="blob" id="b2" style="width:800px;height:800px;background:#FF2DBA"></div>
+<div class="blob" id="b3" style="width:760px;height:760px;background:#b7a6ff"></div>
+
+<div id="hook">
+  <div class="ln"><span class="mk" id="w0"><span>Your</span></span> <span class="mk" id="w1"><span>whole</span></span> <span class="mk" id="w2"><span>launch</span></span></div>
+  <div class="ln"><span class="mk" id="w3"><span>in</span></span> <span class="mk" id="w4"><span>one</span></span> <span class="mk" id="w5"><span id="chatw" class="grad">chat</span></span></div>
+</div>
+<div id="morph"><div class="g grad"></div><div class="tx">chat</div></div>
+
+<div id="app">
+  <div id="side">
+    <img src="assets/aimy-logo-dark.png">
+    <div class="nb"><span style="font-size:20px;font-weight:500">+</span> New chat</div>
+    <div class="sl">CHATS</div>
+    <div class="si on">VYRA launch</div>
+    <div class="sl">AI EMPLOYEES · 52</div>
+    <div id="sideL"></div>
+  </div>
+  <div id="mainh"><b>VYRA launch</b><span><i class="dot"></i>52 AI employees · one chat</span></div>
+  <div id="msgs">
+    <div class="ub grad" id="ub">Launch my home-fitness brand, VYRA</div>
+    <div id="typing"><i></i><i></i><i></i></div>
+    <div id="pm">
+      <div class="hd"><div class="av grad">01</div><div><div class="nm">Project Manager</div><div class="tx">On it — here is the plan for VYRA</div></div></div>
+      <div id="plan"><div class="pt">THE PLAN · IN A FIXED ORDER</div><div id="planL"></div><div class="pf" id="pf">+ 42 more · 52 AI employees, one after another</div></div>
+      <div id="run" class="grad">Run the plan</div>
+    </div>
+  </div>
+  <div id="comp"><span class="ph" id="ph">Give the work…</span><span class="tx" id="ctx" style="display:none"><span id="ctt"></span><span id="caret"></span></span><div id="send" class="grad">↑</div></div>
+</div>
+
+<div id="wallS"><div id="cam"><div id="scanb"></div><div id="scan" class="grad"></div></div></div>
+<div id="cring"></div>
+
+<div id="carS"><div id="carT"><span class="mk" id="ct0"><span>Every</span></span> <span class="mk" id="ct1"><span>profile,</span></span> <span class="mk" id="ct2"><span class="gtext">dressed</span></span></div><div id="ring3"></div></div>
+<div id="hero"><img src="assets/tiktok-en-squat.jpg"></div>
+
+<div id="phS">
+  <div id="phone"><div id="island"></div></div>
+  <div id="phui"><div class="tg"><span class="num grad">26</span>Short Video · ad cut</div></div>
+  <div id="head2"><div><span class="mk" id="h0"><span>Nothing spends</span></span></div><div><span class="mk" id="h1"><span class="gtext">until you approve</span></span></div></div>
+  <div id="pwrap"><div id="pflip">
+    <div class="face" id="front">
+      <div class="row"><span class="num grad" style="height:26px;min-width:36px;font-size:13px">42</span><span style="font-size:18px;font-weight:700">Ads</span><span class="chip" style="margin-left:auto">Draft</span></div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-.04em;margin-top:14px">Campaign draft</div>
+      <div style="position:absolute;left:32px;top:132px;width:280px;height:280px;border-radius:14px;overflow:hidden"><img src="assets/ad-en-vyra-girl.jpg" style="width:100%;height:100%;object-fit:cover"></div>
+      <div style="position:absolute;left:328px;top:132px;width:280px;height:280px;border-radius:14px;overflow:hidden"><img src="assets/ad-en-busy-routine.jpg" style="width:100%;height:100%;object-fit:cover"></div>
+      <div style="position:absolute;left:32px;right:32px;top:432px;display:flex;align-items:center;font-size:18px;font-weight:600;color:#6d6678">Spend<span style="margin-left:auto;color:#FF4B61;font-weight:700">Nothing yet · waiting for you</span></div>
+      <div id="appr" class="btn grad" style="position:absolute;left:32px;top:500px;width:250px;color:#fff">Approve</div>
+      <div class="btn" style="position:absolute;left:298px;top:500px;width:140px;border:2px solid #e3dfe8;color:#3d3846">Edit</div>
+    </div>
+    <div class="face" id="back">
+      <div class="row"><span class="chip" style="background:#e7f8ee;color:#16a34a">✓ Approved by you</span></div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-.04em;margin-top:14px">The VYRA launch, ready</div>
+      <div id="resG"></div>
+      <div style="position:absolute;left:32px;right:32px;top:530px;font-size:18px;font-weight:600;color:#6d6678">The campaign goes out now — on your yes</div>
+    </div>
+  </div></div>
+</div>
+
+<div id="stS">
+  <div class="big" id="s52"><span class="n gtext">52</span><span class="w">AI<br>employees</span></div>
+  <div class="big" id="s1"><span class="n gtext">1</span><span class="w">chat</span></div>
+  <div id="tick"></div>
+</div>
+<div id="endS"><img id="elogo" src="assets/aimy-logo-dark.png"><div id="etag"></div></div>
+
+<svg id="cursor" viewBox="0 0 36 36"><path d="M6 3 L6 29 L13 22.5 L17.5 32.5 L22 30.5 L17.6 20.8 L27 20.6 Z" fill="#141218" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>
+<div id="clickr"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const P=(t,a,b)=>cl((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, ex=x=>x>=1?1:1-Math.pow(2,-10*x);
+const L=(a,b,x)=>a+(b-a)*x;
+const GR='linear-gradient(100deg,#FF8A1F,#FF4B61 50%,#FF2DBA)';
+function mk(el,t,a,b=1e9,dur=.5){const i=el.firstElementChild;const y=(1-ex(P(t,a,a+dur)))*112-eo(P(t,b,b+.38))*112;i.style.transform=`translateY(${y}%)`;}
+function show(el,on){el.style.display=on?'block':'none';}
+
+/* ---------- static build ---------- */
+const ROSTER=[['01','Project Manager'],['02','Counseling'],['05','Market Analysis'],['11','Knowledge'],['12','Funnel'],['13','Logo'],['14','Brand Kit'],['15','Portrait'],['17','Website'],['21','YouTube'],['22','Long Video'],['23','Thumbnail'],['24','X'],['25','Instagram'],['26','Short Video'],['27','Threads'],['28','TikTok'],['29','Facebook'],['35','SNS Cover'],['42','Ads']];
+$('sideL').innerHTML=ROSTER.slice(0,12).map(r=>`<div class="si"><span class="num" style="background:#cfc8d8">${r[0]}</span>${r[1]}</div>`).join('');
+const PLAN=ROSTER.slice(0,10);
+$('planL').innerHTML=PLAN.map((r,i)=>`<div class="pi" id="pi${i}" style="left:${26+(i/5|0)*380}px;top:${52+(i%5)*50}px"><span class="num grad">${r[0]}</span>${r[1]}<span class="ck">✓</span></div>`).join('');
+const RES=[['assets/vyra-logo-en.png','Logo','contain'],['assets/website-hero-en.jpg','Website'],['assets/ad-en-vyra-girl.jpg','Ad'],['assets/girl-cover-1.png','SNS cover'],['assets/thumb-en-1.jpg','Thumbnail'],['assets/02-portrait.jpg','Portrait','cover;object-position:50% 20%']];
+$('resG').innerHTML=RES.map((r,i)=>`<div class="res" id="rs${i}" style="left:${32+(i%3)*196}px;top:${118+(i/3|0)*196}px"><div class="im"><img src="${r[0]}" style="object-fit:${r[2]||'cover'};${r[2]==='contain'?'padding:22px 14px':''}"></div><div class="lb">${r[1]}<i>✓</i></div></div>`).join('');
+
+const IMG=(s,st='')=>`<img class="cv" src="assets/${s}" style="${st}">`;
+const avL=`<div style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #eee;display:flex;align-items:center;justify-content:center;flex:0 0 40px"><img src="assets/vyra-logo-en.png" style="width:32px"></div>`;
+const T={
+ '01':`<div style="padding:26px 28px"><div class="h">VYRA launch plan</div><div class="s" style="margin-top:4px">Every employee, in a fixed order</div>
+  ${[['01','Project Manager','Plan'],['02','Counseling','Goals'],['05','Market Analysis','Market map'],['13','Logo','Nine ideas'],['17','Website','Landing page'],['42','Ads','Waits for your OK']].map((r,i)=>`<div class="row" style="margin-top:${i?12:20}px;font-size:16px;font-weight:600"><span class="num grad">${r[0]}</span>${r[1]}<span style="margin-left:auto;color:#8b8496;font-size:14px">${r[2]}</span><span style="color:#22c55e;font-weight:800;width:16px">${i<5?'✓':''}</span></div>`).join('')}</div>`,
+ '02':`<div style="padding:24px 26px;display:flex;flex-direction:column;gap:12px;font-size:16px;font-weight:600">
+  <div style="align-self:flex-start;background:#f3f1f6;border-radius:4px 16px 16px 16px;padding:12px 16px">Who is VYRA for?</div>
+  <div style="align-self:flex-end;color:#fff;border-radius:16px 16px 4px 16px;padding:12px 16px;background:${GR}">Busy people who train at home</div>
+  <div style="align-self:flex-start;background:#f3f1f6;border-radius:4px 16px 16px 16px;padding:12px 16px">What should launch first?</div>
+  <div style="align-self:flex-end;color:#fff;border-radius:16px 16px 4px 16px;padding:12px 16px;background:${GR}">Brand, website and social</div>
+  <div class="chip" style="align-self:flex-start;background:#e7f8ee;color:#16a34a">✓ Brief saved</div></div>`,
+ '05':`<div style="padding:22px 26px"><div class="h">Market map</div><div class="s">Home fitness · where VYRA fits</div>
+  <svg width="508" height="270" style="position:absolute;left:26px;top:76px" font-family="Inter" font-weight="600">
+   <line x1="254" y1="10" x2="254" y2="250" stroke="#e3dfe8" stroke-width="2"/><line x1="10" y1="130" x2="498" y2="130" stroke="#e3dfe8" stroke-width="2"/>
+   <text x="254" y="268" text-anchor="middle" font-size="13" fill="#9a94a5">Short sessions ↔ Long sessions</text>
+   <text x="8" y="122" font-size="13" fill="#9a94a5">At home</text><text x="500" y="122" text-anchor="end" font-size="13" fill="#9a94a5">Studio</text>
+   <circle cx="380" cy="70" r="11" fill="#cfc8d8"/><text x="396" y="75" font-size="15" fill="#5c5566">Gym chains</text>
+   <circle cx="330" cy="190" r="11" fill="#cfc8d8"/><text x="346" y="195" font-size="15" fill="#5c5566">Yoga studios</text>
+   <circle cx="160" cy="200" r="11" fill="#cfc8d8"/><text x="176" y="205" font-size="15" fill="#5c5566">Video courses</text>
+   <circle cx="92" cy="58" r="16" fill="#FF4B61"/><text x="116" y="64" font-size="19" font-weight="800" fill="#141218">VYRA</text></svg></div>`,
+ '11':`<div style="padding:24px 26px"><div class="h">Knowledge base</div><div class="s">What every employee reads first</div>
+  ${['Brand story','Product facts','Customer questions','Tone of voice'].map((d,i)=>`<div class="row" style="margin-top:${i?10:18}px;height:50px;border-radius:12px;background:#f7f5f9;padding:0 14px;font-size:16px;font-weight:600"><div style="width:22px;height:28px;border-radius:4px;border:2px solid #b9b1c4"></div>${d}<span class="chip" style="margin-left:auto;background:#e7f8ee;color:#16a34a">Saved</span></div>`).join('')}</div>`,
+ '12':`<div style="padding:22px 26px"><div class="h">Funnel</div><div class="s">From first post to member</div>
+  ${['Social posts','Landing page','Free trial','Member'].map((d,i)=>`<div style="margin:${i?8:18}px auto 0;width:${500-i*90}px;height:52px;border-radius:12px;background:${GR};opacity:${1-i*.16};color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center">${d}</div>`).join('')}</div>`,
+ '13':`<div style="position:absolute;left:0;top:0;width:360px;height:360px;background:#fff"><img src="assets/logo-sheet-nine-en.png" style="width:360px;height:360px"><div id="lpick" style="position:absolute;border:4px solid #FF4B61;border-radius:14px;left:4px;top:24px;width:120px;height:72px;opacity:0"></div></div>
+  <div style="position:absolute;left:360px;top:0;width:200px;height:360px;background:#f7f5f9;padding:26px 18px"><div class="h" style="font-size:18px">Nine ideas</div><div class="s">You pick one</div><img id="lsel" src="assets/vyra-logo-en.png" style="position:absolute;left:18px;top:150px;width:164px;opacity:0"><div id="lchip" class="chip" style="position:absolute;left:18px;top:230px;background:#e7f8ee;color:#16a34a;opacity:0">✓ Picked</div></div>`,
+ '14':IMG('brandboard-top.jpg','object-position:50% 30%'),
+ '15':`<div style="position:absolute;left:0;top:0;width:280px;height:360px;overflow:hidden">${IMG('01-original-photo.jpg','object-position:50% 25%')}<span class="chip" style="position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.92)">Selfie</span></div>
+  <div id="pwipe" style="position:absolute;left:280px;top:0;width:280px;height:360px;overflow:hidden;background:#f3f1f6">${IMG('02-portrait.jpg','object-position:50% 20%')}<span class="chip" style="position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.92)">Studio portrait</span></div>`,
+ '17':`<div style="position:absolute;left:0;top:0;right:0;height:30px;background:#f1eff4;display:flex;gap:7px;align-items:center;padding-left:14px"><i style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></i><i style="width:10px;height:10px;border-radius:50%;background:#febc2e"></i><i style="width:10px;height:10px;border-radius:50%;background:#28c840"></i></div><div style="position:absolute;left:0;top:30px;right:0;bottom:0">${IMG('website-hero-en.jpg','object-position:50% 50%')}</div>`,
+ '21':`<div style="position:absolute;left:0;top:0;width:560px;height:143px">${IMG('banner-en.jpg')}</div>
+  <div class="row" style="position:absolute;left:20px;top:156px">${avL}<div><div style="font-size:18px;font-weight:800">VYRA</div><div class="s">Home fitness channel</div></div></div>
+  <div style="position:absolute;right:20px;top:162px;height:34px;border-radius:17px;padding:0 18px;background:#141218;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center">Subscribe</div>
+  ${['thumb-en-1.jpg','thumb-en-2.jpg','thumb-en-3.jpg'].map((s,i)=>`<div style="position:absolute;left:${20+i*176}px;top:222px;width:164px;height:92px;border-radius:8px;overflow:hidden">${IMG(s)}</div>`).join('')}
+  <div class="s" style="position:absolute;left:20px;top:324px">Videos</div>`,
+ '22':`<div style="position:absolute;left:0;top:0;width:560px;height:290px;background:#000">${IMG('07-model-photo-4.jpg','object-position:50% 30%')}<div style="position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-left:22px solid #141218;border-top:14px solid transparent;border-bottom:14px solid transparent;margin-left:6px"></div></div></div>
+  <div style="position:absolute;left:20px;right:20px;top:302px;height:5px;border-radius:3px;background:#ece8f0"><div style="width:38%;height:5px;border-radius:3px;background:${GR}"></div></div>
+  <div class="row" style="position:absolute;left:20px;top:318px;font-size:15px;font-weight:700">Full home workout<span class="s" style="margin-left:12px">Warm-up · Squats · Stretch</span></div>`,
+ '23':`${['thumb-en-1.jpg','thumb-en-2.jpg','thumb-en-3.jpg'].map((s,i)=>`<div style="position:absolute;left:${[16,286,16][i]}px;top:${[16,16,190][i]}px;width:258px;height:145px;border-radius:10px;overflow:hidden">${IMG(s)}</div>`).join('')}
+  <div style="position:absolute;left:286px;top:190px;width:258px;height:145px;border-radius:10px;background:#f7f5f9;padding:18px"><div class="h" style="font-size:18px">Thumbnails</div><div class="s" style="margin-top:4px">One for every video</div></div>`,
+ '24':`<div style="padding:20px 24px"><div class="row">${avL}<div><span style="font-size:17px;font-weight:800">VYRA</span> <span class="s">@vyrafit</span></div><span style="margin-left:auto;font-size:22px;font-weight:800">𝕏</span></div>
+  <div style="font-size:18px;font-weight:600;margin-top:12px;line-height:1.3">Fifteen minutes in your living room still counts</div>
+  <div style="position:absolute;left:24px;right:24px;top:132px;height:190px;border-radius:14px;overflow:hidden">${IMG('girl-pose-3.jpg','object-position:50% 25%')}</div></div>`,
+ '25':`<div class="row" style="position:absolute;left:16px;top:12px">${avL}<span style="font-size:16px;font-weight:700">vyrafit</span></div>
+  <div style="position:absolute;left:0;top:62px;width:560px;height:240px">${IMG('07-model-photo-1.jpg','object-position:50% 30%')}</div>
+  <div style="position:absolute;left:16px;top:314px;font-size:15px;font-weight:600"><b>vyrafit</b> Move at home, fit into your life</div>`,
+ '26':`<div style="position:absolute;left:40px;top:0;width:203px;height:360px">${IMG('tiktok-en-squat.jpg')}</div>
+  <div style="position:absolute;left:280px;top:110px;width:250px"><div class="h">Short Video</div><div class="s" style="margin-top:6px">A vertical cut for Reels, Shorts and TikTok</div></div>`,
+ '27':`<div style="padding:22px 24px"><div class="row">${avL}<span style="font-size:16px;font-weight:700">vyrafit</span><span class="s" style="margin-left:auto">Threads</span></div>
+  <div style="font-size:21px;font-weight:600;line-height:1.35;margin-top:18px;width:290px">Busy day? Ten minutes on the floor is still a workout</div></div>
+  <div style="position:absolute;right:24px;top:84px;width:180px;height:250px;border-radius:14px;overflow:hidden">${IMG('girl-pose-2.jpg','object-position:50% 20%')}</div>`,
+ '28':`<div style="position:absolute;left:300px;top:0;width:203px;height:360px;background:#000">${IMG('girl-pose-4.jpg')}
+  <div style="position:absolute;right:10px;top:150px;display:flex;flex-direction:column;gap:12px">${'♥ … ➦'.split(' ').map(c=>`<div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.88);display:flex;align-items:center;justify-content:center;font-size:17px;color:#141218">${c}</div>`).join('')}</div>
+  <div style="position:absolute;left:12px;bottom:14px;color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.5)">@vyrafit<br>#homeworkout</div></div>
+  <div style="position:absolute;left:34px;top:120px;width:240px"><div class="h">TikTok</div><div class="s" style="margin-top:6px">Posts drafted in the same chat</div></div>`,
+ '29':`<div class="row" style="position:absolute;left:16px;top:12px">${avL}<div><div style="font-size:16px;font-weight:700">VYRA</div><div class="s" style="font-size:12px">Page post</div></div></div>
+  <div style="position:absolute;left:0;top:64px;width:560px;height:240px">${IMG('brand-hero-en.jpg','object-position:50% 40%')}</div>
+  <div style="position:absolute;left:0;right:0;top:312px;display:flex;justify-content:space-around;font-size:15px;font-weight:700;color:#6d6678"><span>Like</span><span>Comment</span><span>Share</span></div>`,
+ '35':`<div style="position:absolute;left:16px;top:16px;width:528px;height:144px;border-radius:10px;overflow:hidden">${IMG('girl-cover-1.png')}</div>
+  <div style="position:absolute;left:16px;top:172px;width:528px;height:144px;border-radius:10px;overflow:hidden">${IMG('cover-en-move-your-city.jpg')}</div>
+  <div class="s" style="position:absolute;left:18px;top:326px">A cover for every profile</div>`,
+ '42':`<div style="position:absolute;left:16px;top:16px;width:256px;height:256px;border-radius:12px;overflow:hidden">${IMG('ad-en-vyra-girl.jpg')}</div>
+  <div style="position:absolute;left:288px;top:16px;width:256px;height:256px;border-radius:12px;overflow:hidden">${IMG('ad-en-busy-routine.jpg')}</div>
+  <div class="chip" style="position:absolute;left:16px;top:292px;height:44px;border-radius:22px;padding:0 18px;font-size:15px;background:#fff1f3;color:#e11d48">Nothing spends until you approve</div>`
+};
+const tiles=[];
+const cam=$('cam');
+ROSTER.forEach((r,i)=>{
+  const col=i%5,row=i/5|0,cx=300+col*600,cy=235+row*470;
+  const d=document.createElement('div');d.className='tile';d.style.left=(cx-280)+'px';d.style.top=(cy-210)+'px';
+  d.innerHTML=`<div class="tl"><span class="n gtext">${r[0]}</span>${r[1]}</div><div class="tb">${T[r[0]]}</div><div class="ring"></div><div class="badge grad">✓ Picked</div>`;
+  cam.appendChild(d);tiles.push({el:d,cx,cy:cy+22,ring:d.querySelector('.ring'),badge:d.querySelector('.badge')});
+});
+
+/* carousel cards */
+const CARDS=[['hero','tiktok-en-squat.jpg'],['img','thumb-en-1.jpg'],['prof','girl-cover-1.png','VYRA','Instagram'],['img','thumb-en-2.jpg'],['prof','cover-en-move-your-city.jpg','VYRA','X'],['img','thumb-en-3.jpg'],['prof','girl-cover-2.png','VYRA','Facebook'],['prof','banner-en.jpg','VYRA','YouTube'],['prof','cover-en-fitness-1.jpg','VYRA','Threads'],['prof','girl-cover-3.png','VYRA','LinkedIn']];
+CARDS[9][3]='TikTok';
+const NC=CARDS.length,R=1300;const cards=[];
+CARDS.forEach((c,i)=>{
+  const w=c[0]==='hero'?360:640,h=c[0]==='hero'?640:360;
+  const inner=c[0]==='prof'?`<div class="prof"><img class="cov" src="assets/${c[1]}"><div class="pav"><img src="assets/vyra-logo-en.png"></div><div class="pb">Follow</div><div class="pn">${c[2]}</div><div class="ps">${c[3]} · home fitness</div></div>`:`<img src="assets/${c[1]}">`;
+  const d=document.createElement('div');d.className='cc';
+  d.innerHTML=`<div class="cf" style="left:${-w/2}px;top:${-h}px;width:${w}px;height:${h}px">${inner}</div><div class="rf" style="left:${-w/2}px;top:6px;width:${w}px;height:${h}px">${inner}</div>`;
+  $('ring3').appendChild(d);cards.push({el:d,f:d.children[0],r:d.children[1],a:i*360/NC});
+});
+
+/* ---------- timing ---------- */
+const DUR=59.5;window.DUR=DUR;
+const HW=[1.0,1.12,1.38,2.04,2.3,2.62];       // hook words (VO +0.6)
+const TYPE=[4.3,5.55],SEND=5.75,UB=5.85,PMT=6.25,PLAN0=6.7,RUN=9.75,RUNCLICK=10.6,CIRC=[10.75,11.7];
+const KEYS=[[10.7,0,1.72],[11.84,1,1.72],[13.10,2,1.72],[14.74,3,1.72],[15.86,4,1.72],[17.2,5,1.72],[20.62,6,1.72],[22.6,7,1.72],[25.36,8,1.72],[27.25,9,1.45],[27.95,10,1.45],[28.6,11,1.45],[29.42,12,1.45],[30.2,13,1.45],[31.56,14,1.45],[32.64,15,1.45],[33.66,16,1.45],[34.5,17,1.45]];
+const OV=[35.25,36.4],SCAN=[36.7,38.5],WIN=[5,8,19],WALLOUT=[39.9,40.5];
+const CAR=[40.2,45.0],WHIP=[43.55,44.45],HERO=[44.55,45.45];
+const PH=[45.1,51.0],PANEL=45.7,HEAD=47.3,CUR=[47.7,48.5],APPR=48.75,FLIP=[49.05,49.75];
+const ST=[50.95,54.35],S1=53.1,END=54.3;
+const tickTxt=('Give the work &nbsp;·&nbsp; <b>Approve</b> &nbsp;·&nbsp; Launch &nbsp;·&nbsp; ').repeat(8);$('tick').innerHTML=tickTxt;
+const tagW='A company of AI employees in one chat'.split(' ');
+$('etag').innerHTML=tagW.map((w,i)=>`<span class="mk" id="et${i}"><span>${w}</span></span>`).join(' ');
+
+function cursorAt(x,y,press){const c=$('cursor');c.style.display='block';c.style.transform=`translate(${x-6}px,${y-3}px) scale(${press?0.86:1})`;}
+function clickRing(t,tc,x,y){const r=$('clickr');const q=P(t,tc,tc+.45);if(q<=0||q>=1){r.style.opacity=0;return;}const s=.4+eo(q)*1.4;r.style.opacity=(1-q)*.9;r.style.transform=`translate(${x-30}px,${y-30}px) scale(${s})`;}
+function cubicPath(t,a,b,x0,y0,x1,y1){const q=eio(P(t,a,b));return [L(x0,x1,q)+Math.sin(q*Math.PI)*-40,L(y0,y1,q)+Math.sin(q*Math.PI)*-30];}
+
+window.seek=function(t){
+  // background blobs drift
+  $('b1').style.transform=`translate(${-260+Math.sin(t*.13)*80}px,${-380+Math.cos(t*.11)*60}px)`;
+  $('b2').style.transform=`translate(${1320+Math.cos(t*.12)*90}px,${560+Math.sin(t*.1)*70}px)`;
+  $('b3').style.transform=`translate(${1300+Math.sin(t*.09)*70}px,${-420+Math.cos(t*.14)*60}px)`;
+  $('cursor').style.display='none';
+  /* ---- S1 hook ---- */
+  const hookOn=t<3.9; show($('hook'),hookOn); $('hook').style.display=hookOn?'flex':'none';
+  if(hookOn){for(let i=0;i<6;i++){mk($('w'+i),t,HW[i]-.12,i<5?3.2+i*.04:1e9,.5);} $('chatw').style.opacity=t<3.45?1:0;}
+  /* ---- morph ---- */
+  const mo=$('morph');
+  if(t>=3.45&&t<4.35){
+    mo.style.display='block';
+    const cw=$('chatw');const r=cw.getBoundingClientRect();
+    const q=eio(P(t,3.45,4.25));
+    const x=L(r.left,180,q),y=L(r.top,110,q),w=L(r.width,1560,q),h=L(r.height,860,q);
+    Object.assign(mo.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px',borderRadius:L(r.height/2,24,q)+'px',background:'#fff',boxShadow:`0 40px 120px rgba(40,20,60,${.16*q})`});
+    mo.firstElementChild.style.opacity=1-P(t,3.6,4.15);mo.lastElementChild.style.opacity=1-P(t,3.45,3.7);
+  } else mo.style.display='none';
+  /* ---- S2 app ---- */
+  const app=$('app');const appOn=t>=4.25&&t<11.8;show(app,appOn);
+  if(appOn){
+    const c=P(t,4.25,4.7);
+    for(const id of ['side','mainh','msgs','comp']) $(id).style.opacity=c;
+    const k1=eio(P(t,4.45,5.3)),k2=eio(P(t,5.95,6.9)),k3=eio(P(t,6.9,10.6));
+    let fx=L(780,915,k1),fy=L(430,640,k1),s=L(1,1.32,k1);fy=L(fy,425,k2);s*=1+.05*k3;
+    app.style.transformOrigin='0 0';app.style.transform=`translate(${960-fx*s}px,${540-fy*s}px) scale(${s})`;
+    // typing
+    const txt='Launch my home-fitness brand, VYRA';const n=Math.floor(txt.length*P(t,TYPE[0],TYPE[1]));
+    const typingOn=t>=TYPE[0]-.1&&t<SEND+.05;
+    $('ph').style.display=typingOn||t>=SEND?'none':'block';$('ph').textContent='Give the work…';
+    if(t>=SEND+.05){$('ph').style.display='block';$('ph').textContent='Message the team…';}
+    $('ctx').style.display=typingOn?'inline':'none';$('ctt').textContent=txt.slice(0,n);$('caret').style.opacity=(Math.floor(t*2.2)%2===0||t<TYPE[1])?1:0;
+    // cursor to send
+    const sb0=$('send').getBoundingClientRect();const sendX=sb0.left+sb0.width/2, sendY=sb0.top+sb0.height/2;
+    if(t>=5.0&&t<SEND+.5){const [x,y]=cubicPath(t,5.0,SEND-.08,1700,1040,sendX,sendY);cursorAt(x,y,Math.abs(t-SEND)<.08);}
+    $('send').style.transform=`scale(${1-.12*Math.max(0,1-Math.abs(t-SEND)/.1)})`;
+    // user bubble
+    const ub=$('ub');const uq=eo(P(t,UB,UB+.4));ub.style.opacity=uq;ub.style.transform=`translateY(${(1-uq)*30}px)`;
+    // typing dots then PM
+    const ty=$('typing');ty.style.opacity=t>=UB+.15&&t<PMT?1:0;[...ty.children].forEach((d,i)=>d.style.transform=`translateY(${-5*Math.max(0,Math.sin((t*7-i*.8)))}px)`);
+    const pq=eo(P(t,PMT,PMT+.4));$('pm').style.opacity=pq;$('pm').style.transform=`translateY(${(1-pq)*24}px)`;
+    $('plan').style.opacity=eo(P(t,PMT+.25,PMT+.6));
+    PLAN.forEach((r,i)=>{const a=PLAN0+i*.27;const q=eo(P(t,a,a+.35));const el=$('pi'+i);el.style.opacity=q;el.style.transform=`translateX(${(1-q)*-18}px)`;const ck=el.lastElementChild;const k=eo(P(t,a+.3,a+.55));ck.style.transform=`scale(${k})`;});
+    $('pf').style.opacity=eo(P(t,9.2,9.6));
+    const rq=eo(P(t,RUN,RUN+.4));const rb=$('run');rb.style.opacity=rq;rb.style.transform=`translateY(${(1-rq)*16}px) scale(${1-.08*Math.max(0,1-Math.abs(t-RUNCLICK)/.1)})`;
+    // cursor to run
+    if(t>=RUN+.1&&t<CIRC[0]+.15){const b=rb.getBoundingClientRect();const tx=b.left+b.width*.5,ty2=b.top+b.height*.55;const [x,y]=cubicPath(t,RUN+.1,RUNCLICK-.08,1500,980,tx,ty2);cursorAt(x,y,Math.abs(t-RUNCLICK)<.08);clickRing(t,RUNCLICK,tx,ty2);}
+  }
+  if(!(t>=RUN&&t<CIRC[1]))$('clickr').style.opacity=0;
+  /* ---- circle open + wall ---- */
+  const wall=$('wallS');const wallOn=t>=CIRC[0]&&t<WALLOUT[1];show(wall,wallOn);const cr=$('cring');
+  if(wallOn){
+    let cxr=960,cyr=540;const b=$('run').getBoundingClientRect();if(t<CIRC[1]){cxr=b.left+b.width/2;cyr=b.top+b.height/2;}
+    if(t<CIRC[1]){const q=eio(P(t,CIRC[0],CIRC[1]));const rad=L(20,2300,q);wall.style.clipPath=`circle(${rad}px at ${cxr}px ${cyr}px)`;show(cr,true);Object.assign(cr.style,{left:(cxr-rad)+'px',top:(cyr-rad)+'px',width:2*rad+'px',height:2*rad+'px',opacity:1-q});}
+    else{wall.style.clipPath='none';show(cr,false);}
+    // camera
+    let X=tiles[0].cx,Y=tiles[0].cy,S=1.72,act=0;
+    for(let k=1;k<KEYS.length;k++){const [tk,ti,sk]=KEYS[k];const q=eio(P(t,tk-.55,tk+.05));if(q>0){X=L(X,tiles[ti].cx,q);Y=L(Y,tiles[ti].cy,q);S=L(S,sk,q);if(q>.5)act=ti;}}
+    const oq=eio(P(t,OV[0],OV[1]));X=L(X,1500,oq);Y=L(Y,950,oq);S=L(S,.545,oq);
+    S*=1+.012*Math.sin((t-10)*.5)*(1-oq)+.03*P(t,OV[1],WALLOUT[0]);
+    const wo=eio(P(t,WALLOUT[0],WALLOUT[1]));S*=1+.35*wo;
+    cam.style.transform=`translate(${960-X*S}px,${540-Y*S}px) scale(${S})`;
+    wall.style.opacity=1-wo;
+    // tile states
+    const sx=L(-100,3100,eio(P(t,SCAN[0],SCAN[1])));
+    tiles.forEach((T,i)=>{
+      let o=oq>0?L(i===act?1:.45,1,oq):(i===act?1:.45);
+      const win=WIN.includes(i);const tp=SCAN[0]+(SCAN[1]-SCAN[0])*((T.cx+100)/3200);
+      const pk=win?eo(P(t,tp,tp+.4)):0;
+      if(t>SCAN[1]-.1&&!win)o*=L(1,.22,eo(P(t,SCAN[1]-.1,SCAN[1]+.5)));
+      const lift=pk+ (win?.6*eio(P(t,SCAN[1],SCAN[1]+.7)):0);
+      T.el.style.opacity=o;T.el.style.transform=`translateY(${-24*lift}px) scale(${1+.07*lift})`;T.el.style.zIndex=win?5:1;
+      T.ring.style.opacity=pk;T.badge.style.opacity=pk;T.badge.style.transform=`scale(${.6+.4*pk})`;
+    });
+    const sc=$('scan'),sb=$('scanb');const so=t>=SCAN[0]-.1&&t<SCAN[1]+.25?1:0;sc.style.opacity=so;sb.style.opacity=so;sc.style.left=sx+'px';sb.style.left=(sx-412)+'px';
+    // in-tile moments
+    const lp=eo(P(t,19.0,19.4));$('lpick').style.opacity=lp;$('lsel').style.opacity=eo(P(t,19.3,19.7));$('lchip').style.opacity=eo(P(t,19.5,19.9));
+    $('pwipe').style.clipPath=`inset(0 ${100-100*eio(P(t,23.7,24.4))}% 0 0)`;
+  } else show(cr,false);
+  /* ---- carousel ---- */
+  const car=$('carS');const carOn=t>=CAR[0]&&t<CAR[1];show(car,carOn);
+  if(carOn){
+    car.style.opacity=eo(P(t,CAR[0],CAR[0]+.5))*(1-P(t,HERO[0],HERO[0]+.4));
+    const ang=t=>{const A1=152+11*(WHIP[0]-CAR[0]);if(t<WHIP[0])return 152+11*(t-CAR[0]);return L(A1,720,eio(P(t,WHIP[0],WHIP[1])));};
+    const a=ang(t),v=Math.abs(ang(t+1/60)-ang(t-1/60))*30;
+    const sc=L(.92,1,eo(P(t,CAR[0],CAR[0]+1.2)));
+    $('ring3').style.transform=`scale(${sc}) translateZ(${-R}px) rotateY(${-a}deg)`;
+    $('mbg').setAttribute('stdDeviation',`${Math.min(26,Math.max(0,(v-30)*.05))} 0`);
+    cards.forEach(c=>{const th=(c.a-a)*Math.PI/180;const f=(Math.cos(th)+1)/2;c.el.style.transform=`rotateY(${c.a}deg) translateZ(${R}px)`;c.f.style.opacity=.3+.7*f;c.r.style.opacity=.3*f;c.f.style.filter=v>40?'url(#mb)':'none';});
+    for(let i=0;i<3;i++)mk($('ct'+i),t,41.15+i*.32,WHIP[0]-.1,.5);
+  }
+  /* ---- hero handoff ---- */
+  const hero=$('hero');const heroOn=t>=HERO[0]&&t<PH[1]+.12;show(hero,heroOn);
+  if(heroOn){
+    // front card screen rect: card 270x480, bottom at y=700, centered; perspective-correct at z=0 → identity
+    const q=eio(P(t,HERO[0]+.05,HERO[1]));
+    const x=L(780,442,q),y=L(160,122,q),w=L(360,396,q),h=L(640,836,q);
+    Object.assign(hero.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px',borderRadius:L(14,50,q)+'px'});
+    const kb=1+.04*P(t,HERO[1],PH[1]);hero.firstElementChild.style.transform=`scale(${kb})`;
+  }
+  /* ---- phone + panel ---- */
+  const ph=$('phS');const phOn=t>=PH[0]&&t<PH[1]+.15;show(ph,phOn);
+  if(phOn){
+    const pq=eo(P(t,PH[0]+.15,HERO[1]+.1));$('phone').style.opacity=pq;$('phone').style.transform=`scale(${L(1.06,1,pq)})`;$('phui').style.opacity=eo(P(t,HERO[1],HERO[1]+.4));
+    const aq=eo(P(t,PANEL,PANEL+.55));$('pwrap').style.opacity=aq;$('pwrap').style.transform=`translateX(${(1-aq)*80}px)`;
+    mk($('h0'),t,HEAD,1e9,.55);mk($('h1'),t,HEAD+.3,1e9,.55);
+    const ax=1000+32+125,ay=300+500+28;
+    if(t>=CUR[0]&&t<FLIP[0]+.3){const [x,y]=cubicPath(t,CUR[0],APPR-.08,1780,1040,ax,ay);cursorAt(x,y,Math.abs(t-APPR)<.08);clickRing(t,APPR,ax,ay);}
+    const ap=$('appr');ap.style.transform=`scale(${1-.07*Math.max(0,1-Math.abs(t-APPR)/.1)})`;
+    if(t>=APPR){ap.style.background='#22c55e';ap.textContent='Approved ✓';}else{ap.style.background=GR;ap.textContent='Approve';}
+    const fq=eio(P(t,FLIP[0],FLIP[1]));$('pflip').style.transform=`rotateY(${-180*fq}deg) translateZ(0)`;
+    RES.forEach((r,i)=>{const q=eo(P(t,FLIP[1]-.1+i*.09,FLIP[1]+.3+i*.09));const el=$('rs'+i);el.style.opacity=q;el.style.transform=`translateY(${(1-q)*14}px)`;});
+    // push out
+    const po=eio(P(t,PH[1]-.12,PH[1]+.12));ph.style.transform=`scale(${1+.5*po})`;ph.style.opacity=1-po;hero.style.opacity=1-po;
+    hero.style.transform=`translate(${(960-0)*0}px,0)`;
+    if(po>0){const s=1+.5*po;const hx=parseFloat(hero.style.left),hy=parseFloat(hero.style.top);hero.style.transformOrigin=`${960-hx}px ${540-hy}px`;hero.style.transform=`scale(${s})`;}
+  } else {ph.style.opacity=1;ph.style.transform='none';hero.style.opacity=1;hero.style.transform='none';}
+  /* ---- stats ---- */
+  const st=$('stS');const stOn=t>=ST[0]&&t<ST[1]+.4;show(st,stOn);
+  if(stOn){
+    const iq=eo(P(t,ST[0]+.05,ST[0]+.3));st.style.opacity=iq*(1-P(t,ST[1],ST[1]+.4));
+    const c1=eio(P(t,S1-.15,S1+.2));
+    $('s52').style.transform=`scale(${L(.82,1,eo(P(t,ST[0],ST[0]+.6)))*(1+.6*c1)})`;$('s52').style.opacity=1-c1;
+    $('s1').style.transform=`scale(${L(.82,1,eo(P(t,S1-.05,S1+.45)))})`;$('s1').style.opacity=eo(P(t,S1-.05,S1+.25));
+    $('tick').style.transform=`translateX(${-80-(t-ST[0])*140}px)`;$('tick').style.opacity=eo(P(t,ST[0]+.3,ST[0]+.8));
+  }
+  /* ---- end ---- */
+  const en=$('endS');const enOn=t>=END;show(en,enOn);
+  if(enOn){
+    en.style.opacity=eo(P(t,END,END+.25));
+    const lq=eo(P(t,END+.25,END+1.05));const lg=$('elogo');lg.style.opacity=lq;lg.style.transform=`translateY(${(1-lq)*30}px) scale(${L(1.06,1,eo(P(t,END+.25,58)))})`;
+    tagW.forEach((w,i)=>mk($('et'+i),t,55.55+i*.11,1e9,.5));
+  }
+};
+window.seek(0);
+</script>
+</body></html>

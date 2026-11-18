@@ -1,0 +1,400 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=block" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f2;--ink:#0e0e10;--grey:#6b6b70;--line:#e7e6e1;--lime:#cdf24f;--orange:#ff6a2a;--blue:#2f6bff;--pink:#ff4fa3}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);font-family:Geist,system-ui,sans-serif;color:var(--ink)}
+#stage{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#dots{position:absolute;left:-3000px;top:-2000px;width:17000px;height:5200px;
+  background-image:radial-gradient(circle,#0e0e1016 1.6px,transparent 2px);background-size:44px 44px}
+.a{position:absolute}
+.card{position:absolute;width:1680px;height:940px;background:#fff;border-radius:40px;border:1px solid var(--line);
+  box-shadow:0 30px 80px -30px #0e0e1030,0 4px 14px -6px #0e0e1018;overflow:hidden;visibility:hidden}
+.mask{position:absolute;overflow:hidden}
+.mask>span,.mask>div{display:block;will-change:transform}
+.title{font-size:46px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.msg{font-size:28px;color:var(--grey);white-space:nowrap}
+.chip{position:absolute;height:46px;border-radius:23px;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 18px;white-space:nowrap}
+.orb{position:absolute;width:64px;height:64px;border-radius:50%}
+.img{position:absolute;overflow:hidden;border-radius:22px;background:#eee}
+.img img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block}
+.tile{position:absolute;border-radius:22px;background:#fafaf8;border:1px solid var(--line)}
+.status{position:absolute;right:56px;top:56px;height:44px;border-radius:22px;padding:0 18px;font-size:21px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.flood{position:absolute;visibility:hidden;z-index:50}
+#hud{position:absolute;left:0;right:0;bottom:16px;height:40px;display:flex;justify-content:center;gap:8px;z-index:60}
+#hud div{height:36px;border-radius:18px;padding:0 15px;font-size:19px;font-weight:600;display:flex;align-items:center;white-space:nowrap;background:#ffffffcc;border:1px solid var(--line);color:var(--grey)}
+#over{position:absolute;inset:0;z-index:80;pointer-events:none}
+</style></head>
+<body><div id="stage"><div id="world"><div id="dots"></div></div><div id="hud"></div><div id="over"></div></div>
+<script>
+// ---------- math ----------
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)), L=(a,b,p)=>a+(b-a)*p, R=(t,a,b)=>cl((t-a)/(b-a));
+const eio=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2, eo=p=>1-Math.pow(1-p,3), eo5=p=>1-Math.pow(1-p,5);
+const ei=p=>p*p*p;
+function spr(dt,f=2.2,z=.55){if(dt<=0)return 0;const w=2*Math.PI*f,wd=w*Math.sqrt(1-z*z);return 1-Math.exp(-z*w*dt)*(Math.cos(wd*dt)+z*w/wd*Math.sin(wd*dt))}
+const lr=(A,B,p)=>({x:L(A.x,B.x,p),y:L(A.y,B.y,p),w:L(A.w,B.w,p),h:L(A.h,B.h,p)});
+// ---------- dom ----------
+const W=document.getElementById('world'),OV=document.getElementById('over'),HUD=document.getElementById('hud');
+function E(par,css,html,cls){const e=document.createElement('div');if(cls)e.className=cls;e.style.cssText=css||'';if(html!=null)e.innerHTML=html;par.appendChild(e);return e}
+function px(e,r){e.style.left=r.x+'px';e.style.top=r.y+'px';e.style.width=r.w+'px';e.style.height=r.h+'px'}
+const vis=(e,v)=>{e.style.visibility=v?'visible':'hidden'};
+function IMG(par,src,x,y,w,h,rad,fit,pos){const d=E(par,`left:${x}px;top:${y}px;width:${w}px;height:${h}px;${rad!=null?'border-radius:'+rad+'px;':''}`,`<img src="assets/${src}" style="object-fit:${fit||'cover'};${pos?'object-position:'+pos:''}">`,'img');return d}
+function MASK(par,x,y,w,h,inner,cls,css){const m=E(par,`left:${x}px;top:${y}px;width:${w}px;height:${h}px`,null,'mask');const s=E(m,css||'',inner,cls);m.s=s;return m}
+// rise text from mask line
+function rise(m,t,t0,d=.5){const p=eo(R(t,t0,t0+d));m.s.style.transform=`translateY(${(1-p)*115}%)`;vis(m,t>=t0)}
+function pop(e,t,t0,base='',f=2.4){const s=spr(t-t0,f,.5);e.style.transform=`${base} scale(${Math.max(0,s)})`;vis(e,t>=t0)}
+function slideUp(e,t,t0,dist=80,base=''){const s=spr(t-t0,2,.62);e.style.transform=`${base} translateY(${(1-s)*dist}px) scale(${L(.9,1,cl(s))})`;e.style.clipPath='';vis(e,t>=t0)}
+function wipe(e,t,t0,d=.6,dir='l'){const p=eio(R(t,t0,t0+d));e.style.clipPath=dir=='l'?`inset(0 ${(1-p)*100}% 0 0 round 22px)`:dir=='t'?`inset(0 0 ${(1-p)*100}% 0 round 22px)`:`inset(${(1-p)*100}% 0 0 0 round 22px)`;vis(e,t>=t0)}
+const orbBG=(a,c1,c2,c3)=>`radial-gradient(circle at 32% 30%,#fff9 0,#fff0 34%),conic-gradient(from ${a}deg,${c1},${c2},${c3},${c1})`;
+
+// ---------- layout ----------
+const COLORS={lime:'#cdf24f',orange:'#ff6a2a',blue:'#2f6bff',pink:'#ff4fa3'};
+const PITCHX=1840,PITCHY=1080;
+const CARDS=[ // grid col,row ; start time T
+ {g:[1,0],T:6.6, c:'lime',  n:'01',title:'Project Manager',msg:'The launch plan. Every employee, in order.',hud:[0]},
+ {g:[2,0],T:12.0,c:'orange',n:'13',title:'Logo',msg:'Nine ideas for VYRA. You pick one.',hud:[1]},
+ {g:[2,1],T:17.1,c:'blue',  n:'14',title:'Brand Kit',msg:'The whole look, built around your logo.',hud:[2]},
+ {g:[3,1],T:21.6,c:'pink',  n:'15',title:'Portrait',msg:'Your selfie, turned into a studio portrait.',hud:[3]},
+ {g:[4,1],T:26.4,c:'lime',  n:'17',title:'Website',msg:'The landing page, on desktop and phone.',hud:[4]},
+ {g:[4,0],T:30.6,c:'orange',n:'21 · 23',title:'YouTube + Thumbnail',msg:'The channel page and its thumbnails.',hud:[5,6]},
+ {g:[5,0],T:35.1,c:'blue',  n:'24 · 25 · 28',title:'X · Instagram · TikTok',msg:'A post for every app.',hud:[7,8,9]},
+ {g:[5,1],T:40.6,c:'pink',  n:'35',title:'SNS Cover',msg:'A cover for every profile.',hud:[10]},
+ {g:[6,1],T:44.6,c:'lime',  n:'42',title:'Ads',msg:'Campaign drafted. Nothing spends until you approve.',hud:[11]},
+];
+const HUDN=['01 Project Manager','13 Logo','14 Brand Kit','15 Portrait','17 Website','21 YouTube','23 Thumbnail','24 X','25 Instagram','28 TikTok','35 SNS Cover','42 Ads'];
+const hudEls=HUDN.map(s=>E(HUD,'',s));
+const txtOn=c=>c=='lime'?'#0e0e10':'#fff';
+CARDS.forEach((C,i)=>{
+  C.cx=C.g[0]*PITCHX; C.cy=C.g[1]*PITCHY; C.ox=C.cx-840; C.oy=C.cy-470;
+  const el=E(W,`left:${C.ox}px;top:${C.oy}px`,null,'card'); C.el=el;
+  C.orb=E(el,`left:56px;top:50px`,null,'orb');
+  C.tm=MASK(el,140,40,1100,60,C.title,'title');C.tm.s.style.display='inline-block';
+  const tw=C.title.length*25+40; // approx width for chip placement
+  C.chip=E(el,`left:${140}px;top:${-100}px;background:${COLORS[C.c]};color:${txtOn(C.c)}`,C.n,'chip');
+  C.mm=MASK(el,140,100,1200,40,C.msg,'msg');
+  C.st=E(el,'background:#f1f1ee;color:#6b6b70','<span class="sp"></span><span class="tx">Working…</span>','status');
+  C.flood=E(W,`background:${COLORS[C.c]}`,null,'flood');
+  C.L=(x,y,w,h)=>({x:C.ox+x,y:C.oy+y,w,h});
+});
+// measure chip positions after fonts: place chip right after title
+function placeChips(){CARDS.forEach(C=>{const w=C.tm.s.getBoundingClientRect().width/ (C._z||1);C.chipX=140+C.tm.s.scrollWidth+22;C.chip.style.left=C.chipX+'px';C.chip.style.top='48px'})}
+
+// ---------- scene 0: composer + chat window ----------
+const COMP={x:150-330,y:375-48,w:660,h:96};
+const glow=E(W,`left:${COMP.x-40}px;top:${COMP.y-40}px;width:${COMP.w+80}px;height:${COMP.h+80}px;border-radius:90px;filter:blur(26px)`,null,'a');
+const win=E(W,'overflow:hidden;background:#fff;border:1px solid #e7e6e1;box-shadow:0 30px 80px -30px #0e0e1030',null,'a');
+const WIN={x:-800,y:-460,w:1600,h:920};
+const winIn=E(win,'left:0;top:0;width:1600px;height:920px',null,'a'); // content in final coords (offset set per frame)
+// sidebar
+E(winIn,'left:0;top:0;width:300px;height:920px;background:#fafaf7;border-right:1px solid #ecebe6',null,'a');
+E(winIn,'left:28px;top:26px;width:92px;height:65px',`<img src="assets/aimy-logo-dark.png" style="width:92px;height:65px;display:block">`,'a');
+E(winIn,'left:24px;top:116px;width:252px;height:48px;border-radius:24px;background:#0e0e10;color:#fff;font-size:19px;font-weight:600;display:flex;align-items:center;padding-left:20px','+ New chat','a');
+E(winIn,'left:28px;top:192px;font-size:15px;font-weight:600;color:#9a9a9f;letter-spacing:.08em','EMPLOYEES','a');
+['Project Manager','Logo','Brand Kit','Portrait','Website','YouTube','Thumbnail','X','Instagram','TikTok','SNS Cover','Ads'].forEach((n,i)=>{
+  E(winIn,`left:28px;top:${226+i*52}px;width:30px;height:30px;border-radius:50%;background:${orbBG(i*40,'#cdf24f','#2f6bff','#ff4fa3')}`,null,'a');
+  E(winIn,`left:72px;top:${229+i*52}px;font-size:19px;font-weight:500;color:#3a3a3f`,n,'a');
+});
+E(winIn,'left:300px;top:0;width:1300px;height:76px;border-bottom:1px solid #efeee9',null,'a');
+E(winIn,'left:340px;top:22px;font-size:24px;font-weight:650','VYRA launch','a');
+E(winIn,'left:1380px;top:22px;height:34px;border-radius:17px;padding:0 14px;background:#f1f1ee;font-size:17px;font-weight:600;color:#6b6b70;display:flex;align-items:center','52 AI employees','a');
+// composer (lives in world, above window)
+const comp=E(W,`left:${COMP.x}px;top:${COMP.y}px;width:${COMP.w}px;height:${COMP.h}px;border-radius:48px;background:#fff;border:1px solid #e3e2dc;box-shadow:0 10px 30px -12px #0e0e1028`,null,'a');
+E(comp,'left:22px;top:24px;width:48px;height:48px;border-radius:50%;border:1.5px solid #d9d8d2;font-size:30px;color:#6b6b70;display:flex;align-items:center;justify-content:center;font-weight:300','+','a');
+const ctext=E(comp,'left:88px;top:28px;font-size:27px;font-weight:500;white-space:nowrap;color:#0e0e10','','a');
+const send=E(comp,'left:578px;top:16px;width:64px;height:64px;border-radius:50%;background:#2f6bff;display:flex;align-items:center;justify-content:center','<svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>','a');
+const ripple=E(W,'border-radius:50%;border:solid #cdf24f;visibility:hidden',null,'a');
+const ask=MASK(W,150-600,190,1200,80,'Give your AI team the work.','', 'font-family:"Instrument Serif",serif;font-size:66px;text-align:center;color:#0e0e10');
+const PROMPT='Launch VYRA, my home-fitness brand.';
+const ctimes=(()=>{let s=1,a=[],acc=0;for(let i=0;i<PROMPT.length;i++){s=(s*9301+49297)%233280;let d=.6+.8*(s/233280);const ch=PROMPT[i];if(ch==' ')d*=1.4;if(PROMPT[i-1]==',')d*=2.4;acc+=d;a.push(acc)}return a.map(x=>1.0+3.25*x/acc)})();
+// user bubble + PM reply
+const BUB={x:760-560,y:-460+110,w:560,h:72};
+const bub=E(W,'background:#0e0e10;color:#fff;font-size:26px;font-weight:500;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;visibility:hidden',PROMPT,'a');
+const pmOrb=E(W,`left:-440px;top:-230px;width:52px;height:52px;border-radius:50%;visibility:hidden`,null,'a');
+const pmName=E(W,'left:-372px;top:-224px;font-size:20px;font-weight:650;visibility:hidden','Project Manager <span style="color:#9a9a9f;font-weight:500">· 01</span>','a');
+const REP={x:-372,y:-186,w:520,h:70};
+const rep=E(W,`left:${REP.x}px;top:${REP.y}px;width:${REP.w}px;height:${REP.h}px;border-radius:24px;background:#f1f1ee;font-size:25px;display:flex;align-items:center;padding-left:26px;visibility:hidden`,'','a');
+const pm2=E(W,'left:-372px;top:-96px;font-size:20px;color:#9a9a9f;visibility:hidden','Handing work to each employee…','a');
+
+// ---------- C1: PM plan ----------
+const ROSTER=[['01','Project Manager'],['02','Counseling'],['05','Market Analysis'],['11','Knowledge'],['12','Funnel'],['13','Logo'],['14','Brand Kit'],['15','Portrait'],['17','Website'],['21','YouTube'],['23','Thumbnail'],['24','X'],['25','Instagram'],['28','TikTok'],['35','SNS Cover'],['42','Ads']];
+{const C=CARDS[0];C.rows=ROSTER.map((r,i)=>{const x=66+(i%4)*(372+20),y=180+Math.floor(i/4)*168;
+  const t=E(C.el,`left:${x}px;top:${y}px;width:372px;height:150px`,null,'tile');
+  E(t,'left:24px;top:24px;width:58px;height:58px;border-radius:50%;background:#0e0e10;color:#cdf24f;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center',r[0],'a');
+  E(t,'left:24px;top:96px;font-size:27px;font-weight:650;white-space:nowrap',r[1],'a');
+  t.ck=E(t,'right:22px;top:26px;height:34px;border-radius:17px;padding:0 12px;font-size:17px;font-weight:600;display:flex;align-items:center;background:#f1f1ee;color:#6b6b70','In order','a');
+  t.r={x,y,w:372,h:150};return t});
+ C.foot=MASK(C.el,66,856,1548,44,'…and the rest of the 52, whenever the work needs them.','msg');}
+
+// ---------- C2: Logo ----------
+{const C=CARDS[1];C.tiles=[];for(let i=0;i<9;i++){const x=111+(i%3)*(470+24),y=180+Math.floor(i/3)*240;
+  const t=E(C.el,`left:${x}px;top:${y}px;width:470px;height:220px;background:#fff;overflow:hidden`,`<img src="assets/logo-${i}.jpg" style="position:absolute;left:35px;top:14px;width:400px;height:193px;object-fit:contain">`,'tile');
+  t.r={x,y,w:470,h:220};C.tiles.push(t)}
+ C.ring=E(C.el,'border:6px solid #ff6a2a;border-radius:28px;visibility:hidden',null,'a');
+ C.picked=E(C.el,'height:44px;border-radius:22px;background:#0e0e10;color:#cdf24f;font-size:21px;font-weight:700;padding:0 18px;display:flex;align-items:center;visibility:hidden;white-space:nowrap','✓ Picked','a');}
+
+// ---------- C3: Brand Kit ----------
+{const C=CARDS[2];
+ C.logoT=E(C.el,'left:56px;top:180px;width:944px;height:230px;background:#fff',null,'tile');
+ C.LOGO={x:56+152,y:180+25,w:640,h:180};
+ C.logo=IMG(C.el,'vyra-logo-en.png',C.LOGO.x,C.LOGO.y,640,180,0,'contain');C.logo.style.background='transparent';
+ C.chips=[['#FFB000','Energy Orange'],['#FF4B61','VYRA Coral'],['#FF2DBA','VYRA Pink'],['#0D0F14','Graphite'],['#F4F4F5','Cloud']].map((c,i)=>{
+   const x=56+i*(172+21),t=E(C.el,`left:${x}px;top:430px;width:172px;height:170px;background:#fff;overflow:hidden`,null,'tile');
+   E(t,`left:0;top:0;width:172px;height:104px;background:${c[0]}`,null,'a');
+   E(t,'left:14px;top:114px;font-size:18px;font-weight:650;white-space:nowrap',c[1],'a');E(t,'left:14px;top:140px;font-size:16px;color:#8a8a8f',c[0],'a');return t});
+ C.type=E(C.el,'left:56px;top:620px;width:944px;height:280px;background:#fff',null,'tile');
+ E(C.type,'left:34px;top:26px;font-size:20px;font-weight:600;color:#8a8a8f;letter-spacing:.06em','TYPOGRAPHY · INTER','a');
+ C.tyH=MASK(C.type,34,70,880,90,'Move First. Feel Strong.','','font-size:72px;font-weight:800;font-style:italic;letter-spacing:-.02em');
+ C.tyB=MASK(C.type,34,176,880,80,'A simple, effective workout that fits into your busy life.','','font-size:28px;color:#3a3a3f;line-height:1.3');
+ C.board=IMG(C.el,'brandboard-en.jpg',1077,170,547,730,22);
+ C.VIEW={x:1077+8,y:170+467,w:342,h:175};}
+
+// ---------- C4: Portrait ----------
+{const C=CARDS[3];
+ C.self=IMG(C.el,'01-original-photo.jpg',110,190,440,550,26);
+ C.selfL=MASK(C.el,110,760,440,44,'Your selfie','','font-size:28px;font-weight:650;text-align:center');
+ C.arrow=E(C.el,'left:580px;top:440px;width:190px;height:50px','<svg width="190" height="50"><path id="ap" d="M6 25 H170 M150 8 L172 25 L150 42" stroke="#0e0e10" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>','a');
+ C.ph=E(C.el,'left:800px;top:180px;width:600px;height:693px;border-radius:26px;overflow:hidden;background:linear-gradient(110deg,#efeee9 30%,#faf9f5 50%,#efeee9 70%);background-size:300% 100%',null,'a');
+ C.port=IMG(C.ph,'02-portrait.jpg',0,0,600,693,0);
+ C.scan=E(C.ph,'left:0;width:600px;height:8px;background:#ff4fa3;box-shadow:0 0 30px 8px #ff4fa388',null,'a');
+ C.portL=E(C.el,'left:830px;top:800px;height:48px;border-radius:24px;background:#fff;font-size:22px;font-weight:650;padding:0 20px;display:flex;align-items:center;box-shadow:0 6px 20px -8px #0003','Studio portrait','a');
+ C.more=[1,2,3,4].map((k,i)=>IMG(C.el,`07-model-photo-${k}.jpg`,1440,180+i*176,184,160,18));}
+
+// ---------- C5: Website ----------
+{const C=CARDS[4];
+ C.lap=E(C.el,'left:70px;top:176px;width:1080px;height:600px;border-radius:26px;background:#0e0e10',null,'a');
+ C.lapS=IMG(C.lap,'website-hero-en.jpg',20,20,1040,537,10);
+ C.base=E(C.el,'left:20px;top:770px;width:1180px;height:26px;border-radius:0 0 30px 30px;background:linear-gradient(#d9d8d3,#bdbcb6)',null,'a');
+ C.url=E(C.lap,'left:380px;top:-2px;width:320px;height:22px;border-radius:0 0 12px 12px;background:#0e0e10',null,'a');
+ C.phone=E(C.el,'left:1230px;top:170px;width:340px;height:720px;border-radius:52px;background:#0e0e10;overflow:hidden',null,'a');
+ C.pscr=E(C.phone,'left:12px;top:12px;width:316px;height:696px;border-radius:42px;overflow:hidden;background:#fff',null,'a');
+ C.lp=E(C.pscr,'left:0;top:0;width:316px;height:1245px','<img src="assets/lp-tall-en.jpg" style="width:316px;height:1245px;display:block">','a');
+ C.notch=E(C.phone,'left:120px;top:22px;width:100px;height:28px;border-radius:14px;background:#0e0e10',null,'a');
+ C.wL=MASK(C.el,70,826,1100,44,'One page, built in the same chat.','msg');}
+
+// ---------- C6: YouTube + Thumbnail ----------
+{const C=CARDS[5];
+ C.pl=IMG(C.el,'thumb-en-1.jpg',56,176,1030,580,24);
+ C.play=E(C.pl,'left:455px;top:250px;width:120px;height:84px;border-radius:24px;background:#ff1f3d;display:flex;align-items:center;justify-content:center','<svg width="40" height="44" viewBox="0 0 40 44"><path d="M4 2 L38 22 L4 42Z" fill="#fff"/></svg>','a');
+ C.bar=E(C.pl,'left:0;bottom:0;height:8px;background:#ff1f3d',null,'a');
+ C.ytT=MASK(C.el,56,770,1030,50,'Move First. Feel Strong. | 15-minute home workout','','font-size:34px;font-weight:700;white-space:nowrap');
+ C.ch=E(C.el,'left:56px;top:836px;width:1030px;height:56px',`<div style="position:absolute;left:0;top:0;width:56px;height:56px;border-radius:50%;background:#fff;border:1px solid #e7e6e1;overflow:hidden"><img src="assets/vyra-logo-en.png" style="position:absolute;left:5px;top:18px;width:46px;height:20px;object-fit:contain"></div><div style="position:absolute;left:72px;top:14px;font-size:24px;font-weight:700">VYRA</div><div style="position:absolute;left:170px;top:6px;height:44px;border-radius:22px;background:#0e0e10;color:#fff;font-size:19px;font-weight:600;padding:0 20px;display:flex;align-items:center">Subscribe</div>`,'a');
+ C.nextL=MASK(C.el,1120,176,500,36,'Up next','','font-size:24px;font-weight:700');
+ C.items=[['thumb-en-2.jpg','Fit into your life, at home'],['thumb-en-3.jpg','Busy routine? Reset in 15 minutes'],['thumb-en-1.jpg','Thumbnail set: three picks']].map((a,i)=>{
+   const y=226+i*220;const g=E(C.el,`left:1120px;top:${y}px;width:504px;height:200px`,null,'a');
+   IMG(g,a[0],0,0,320,180,16);E(g,'left:338px;top:8px;width:166px;font-size:22px;font-weight:650;line-height:1.25',a[1],'a');E(g,'left:338px;top:126px;font-size:18px;color:#8a8a8f','VYRA','a');g.r={x:1120,y,w:320,h:180};return g});}
+
+// ---------- C7: Social ----------
+{const C=CARDS[6];
+ const head=(par,h,sub)=>{E(par,'left:22px;top:20px;width:56px;height:56px;border-radius:50%;background:#fff;border:1px solid #e7e6e1;overflow:hidden','<img src="assets/vyra-logo-en.png" style="position:absolute;left:5px;top:18px;width:46px;height:20px;object-fit:contain">','a');E(par,'left:92px;top:22px;font-size:23px;font-weight:700',h,'a');E(par,'left:92px;top:52px;font-size:18px;color:#8a8a8f',sub,'a')};
+ C.x=E(C.el,'left:56px;top:176px;width:540px;height:720px;background:#fff',null,'tile');head(C.x,'VYRA','@vyra · X');
+ E(C.x,'left:22px;top:94px;width:496px;font-size:25px;line-height:1.35','Fitness that fits your workday. Fifteen minutes, at home.','a');
+ C.xi=IMG(C.x,'ad-en-vyra-girl.jpg',22,190,496,496,20);
+ C.ig=E(C.el,'left:620px;top:176px;width:540px;height:720px;background:#fff',null,'tile');head(C.ig,'vyra.fit','Instagram');
+ C.igi=IMG(C.ig,'girl-pose-1.jpg',0,92,540,500,0,'cover','50% 20%');
+ C.heart=E(C.ig,'left:22px;top:606px;width:200px;height:40px','<svg width="200" height="40" viewBox="0 0 200 40"><path d="M20 34 C4 22 2 12 9 7 C14 3 19 6 20 10 C21 6 26 3 31 7 C38 12 36 22 20 34Z" fill="#ff3b5c"/><path d="M60 8 h26 a6 6 0 0 1 6 6 v12 a6 6 0 0 1 -6 6 h-16 l-8 6 v-6 h-2 a6 6 0 0 1 -6 -6 v-12 a6 6 0 0 1 6 -6z" stroke="#0e0e10" stroke-width="3" fill="none"/><path d="M110 20 L138 8 L130 34 L124 24Z" stroke="#0e0e10" stroke-width="3" fill="none" stroke-linejoin="round"/></svg>','a');
+ E(C.ig,'left:22px;top:656px;width:500px;font-size:21px;line-height:1.3','<b>vyra.fit</b> Move at home. Fit into your life.','a');
+ C.tk=E(C.el,'left:1190px;top:176px;width:404px;height:720px;border-radius:46px;background:#0e0e10;overflow:hidden',null,'a');
+ C.tki=IMG(C.tk,'tiktok-en-squat.jpg',10,10,384,700,38);
+ E(C.tk,'left:330px;top:330px;width:50px;height:200px','<svg width="50" height="200" viewBox="0 0 50 200"><path d="M25 40 C6 26 4 14 12 9 C18 5 23 9 25 13 C27 9 32 5 38 9 C46 14 44 26 25 40Z" fill="#fff"/><circle cx="25" cy="95" r="16" fill="#fff"/><path d="M18 150 L40 140 L34 168 L28 158Z" fill="#fff"/></svg>','a');
+ E(C.tk,'left:30px;top:600px;width:300px;font-size:22px;color:#fff;font-weight:600;text-shadow:0 2px 10px #0008;line-height:1.3','@vyra<br><span style="font-weight:400">15-minute squat flow. Try it today.</span>','a');
+ C.lab=[['24 · X',56],['25 · Instagram',620],['28 · TikTok',1190]].map(a=>E(C.el,`left:${a[1]+16}px;top:-60px;height:40px;border-radius:20px;background:#2f6bff;color:#fff;font-size:18px;font-weight:700;padding:0 14px;display:flex;align-items:center;white-space:nowrap`,a[0],'a'));}
+
+// ---------- C8: SNS Cover ----------
+{const C=CARDS[7];
+ C.pr=[['girl-cover-1.png','X'],['girl-cover-2.png','YouTube'],['girl-cover-3.png','Facebook'],['cover-en-fitness-1.jpg','Threads']].map((a,i)=>{
+  const x=56+(i%2)*808,y=176+Math.floor(i/2)*370;const g=E(C.el,`left:${x}px;top:${y}px;width:760px;height:345px;background:#fff;overflow:visible`,null,'tile');
+  g.im=IMG(g,a[0],0,0,760,208,22);g.im.style.borderRadius='22px 22px 0 0';
+  g.av=E(g,'left:28px;top:150px;width:110px;height:110px;border-radius:50%;background:#fff;border:5px solid #fff;box-shadow:0 6px 18px -6px #0004;overflow:hidden','<img src="assets/vyra-logo-en.png" style="position:absolute;left:9px;top:36px;width:82px;height:30px;object-fit:contain">','a');
+  E(g,'left:160px;top:222px;font-size:28px;font-weight:700','VYRA','a');E(g,'left:160px;top:262px;font-size:20px;color:#8a8a8f','Move at home. Fit into your life.','a');
+  E(g,'right:24px;top:228px;height:40px;border-radius:20px;background:#ff4fa3;color:#fff;font-size:18px;font-weight:700;padding:0 16px;display:flex;align-items:center',a[1],'a');
+  g.r={x,y,w:760,h:345};return g});}
+
+// ---------- C9: Ads ----------
+{const C=CARDS[8];
+ C.a1=IMG(C.el,'ad-en-vyra-girl.jpg',56,176,480,480,24);
+ C.a2=IMG(C.el,'ad-en-busy-routine.jpg',556,176,480,480,24);
+ C.bn=IMG(C.el,'banner-en.jpg',56,676,980,250,20,'cover');
+ C.panel=E(C.el,'left:1070px;top:176px;width:554px;height:740px;border-radius:30px;background:#f4f4f1',null,'a');
+ E(C.panel,'left:34px;top:30px;font-size:36px;font-weight:750;letter-spacing:-.01em','Campaign draft','a');
+ C.stp=E(C.panel,'left:34px;top:88px;height:42px;border-radius:21px;padding:0 16px;font-size:19px;font-weight:650;display:flex;align-items:center;gap:8px;white-space:nowrap','','a');
+ C.rows=[['Creatives','3 ads, ready'],['Channels','Instagram · Facebook'],['Audience','Busy people who train at home'],['Budget','You set it']].map((r,i)=>{
+   const g=E(C.panel,`left:34px;top:${160+i*82}px;width:486px;height:70px;border-bottom:1px solid #e3e2dc`,`<div style="position:absolute;left:0;top:8px;font-size:18px;color:#8a8a8f">${r[0]}</div><div style="position:absolute;left:0;top:34px;font-size:23px;font-weight:650;white-space:nowrap">${r[1]}</div>`,'a');return g});
+ C.note=MASK(C.panel,34,500,486,80,'Nothing spends until you approve.','','font-size:31px;font-weight:700;line-height:1.2');
+ C.APR={x:1070+34,y:176+620,w:300,h:84};
+ C.apr=E(C.el,`left:${C.APR.x}px;top:${C.APR.y}px;width:300px;height:84px;border-radius:42px;background:#cdf24f;font-size:28px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:10px;white-space:nowrap`,'','a');
+ C.edit=E(C.el,`left:${1070+354}px;top:${176+620}px;width:166px;height:84px;border-radius:42px;border:2px solid #0e0e10;font-size:26px;font-weight:650;display:flex;align-items:center;justify-content:center`,'Edit','a');}
+
+// cursor
+const cur=E(W,'z-index:70;width:44px;height:52px;visibility:hidden','<svg width="44" height="52" viewBox="0 0 44 52"><path d="M4 3 L4 42 L14 33 L21 49 L29 45 L22 30 L36 30 Z" fill="#0e0e10" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>','a');
+const clickRing=E(W,'z-index:69;border-radius:50%;border:4px solid #0e0e10;visibility:hidden',null,'a');
+
+// ---------- overlay: approve flood + end card ----------
+const lime=E(OV,'background:#cdf24f;visibility:hidden;overflow:hidden',null,'a');
+const limeLab=E(OV,'left:0;top:0;width:1920px;text-align:center;font-weight:750;visibility:hidden;white-space:nowrap','✓ Approved','a');
+const w1=MASK(OV,0,330,1920,130,'Nothing spends','','font-size:118px;font-weight:800;letter-spacing:-.03em;text-align:center');
+const w2=MASK(OV,0,462,1920,130,'until you approve.','','font-size:118px;font-weight:800;letter-spacing:-.03em;text-align:center');
+const endBg=E(OV,'left:0;top:0;width:1920px;height:1080px;background:#f5f5f2;visibility:hidden',null,'a');
+const endGlow=E(OV,'visibility:hidden;border-radius:90px;filter:blur(26px)',null,'a');
+const endPill=E(OV,'background:#cdf24f;visibility:hidden;overflow:hidden;font-size:27px;font-weight:600;display:flex;align-items:center;justify-content:center;white-space:nowrap',null,'a');
+const endLogo=E(OV,'left:690px;top:180px;width:540px;height:380px;visibility:hidden','<img src="assets/aimy-logo-dark.png" style="width:540px;height:380px;display:block">','a');
+const endT=MASK(OV,0,600,1920,80,'52 AI employees. One chat.','','font-size:64px;font-weight:750;letter-spacing:-.02em;text-align:center');
+const endS=MASK(OV,0,684,1920,50,'A company of AI employees in one chat.','','font-size:30px;color:#6b6b70;text-align:center');
+
+// ---------- camera ----------
+// keys: [t, x, y, zoom, easeKind]
+function camAt(t){
+  // scene 0
+  if(t<4.75){const p=eio(R(t,0.15,4.75));return [150,375,Math.exp(L(Math.log(1),Math.log(2.7),p))]}
+  if(t<6.6){const p=eio(R(t,4.85,6.3));return [L(150,0,p),L(375,0,p),Math.exp(L(Math.log(2.7),Math.log(1.05),p))]}
+  // card scenes: travel 95% in 0.95s, drift 5% the rest
+  for(let i=0;i<CARDS.length;i++){const C=CARDS[i],T=C.T,N=i+1<CARDS.length?CARDS[i+1].T:49.7;
+    if(t<N||i==CARDS.length-1&&t<49.7){const P=i==0?{cx:0,cy:0}:CARDS[i-1];
+      const q=.94*eio(R(t,T,T+.95))+.06*R(t,T,N);const z0=i==0?1.05:1;const z=Math.exp(L(Math.log(z0),0,eio(R(t,T,T+.95))));
+      return [L(P.cx,C.cx,q),L(P.cy,C.cy,q),z]}}
+  // final push into approve pill
+  const C=CARDS[8],A={x:C.ox+C.APR.x+150,y:C.oy+C.APR.y+42};const p=ei(R(t,49.7,51.0));
+  return [L(C.cx,A.x,eio(R(t,49.7,51.0))),L(C.cy,A.y,eio(R(t,49.7,51.0))),Math.exp(L(0,Math.log(2.4),p))];
+}
+let cam=[0,0,1];
+function toScreen(x,y){return {x:(x-cam[0])*cam[2]+960,y:(y-cam[1])*cam[2]+540}}
+
+// ---------- flood helper ----------
+function flood(C,src,t,srcRad=22){const T=C.T,f=C.flood;
+  const dst={x:C.ox,y:C.oy,w:1680,h:940},chip={x:C.ox+C.chipX,y:C.oy+48,w:C.chip.offsetWidth,h:46};
+  if(t<T||t>=T+1.0){vis(f,false);return}
+  vis(f,true);let r,rad;
+  if(t<T+.55){const p=eio(R(t,T,T+.55));r=lr(src,dst,p);rad=L(srcRad,40,p)}
+  else{const p=eio(R(t,T+.55,T+1.0));r=lr(dst,chip,p);rad=L(40,23,p)}
+  px(f,r);f.style.borderRadius=rad+'px';}
+function cardBase(C,t){const T=C.T;vis(C.el,t>=T+.55);
+  C.orb.style.background=orbBG(t*60,'#cdf24f','#2f6bff','#ff4fa3');pop(C.orb,t,T+.6);
+  rise(C.tm,t,T+.62);vis(C.chip,t>=T+1.0);rise(C.mm,t,T+.8);
+  const done=t>=T+3.0&&C!==CARDS[8];
+  if(C===CARDS[8]){const ok=t>=49.3;C.st.style.background=ok?'#cdf24f':'#fff1e8';C.st.style.color=ok?'#0e0e10':'#c2410c';C.st.querySelector('.tx').textContent=ok?'✓ Approved by you':'Waiting for you'}
+  else{C.st.style.background=done?'#cdf24f':'#f1f1ee';C.st.style.color=done?'#0e0e10':'#6b6b70';
+  C.st.querySelector('.tx').textContent=done?'✓ Done':'Working'+'.'.repeat(1+Math.floor((t*3)%3));}
+  pop(C.st,t,T+.9,'',2.6);if(done)C.st.style.transform=`scale(${1+.08*Math.sin(Math.PI*R(t,T+3,T+3.3))})`;}
+function curAt(x,y,t,clickT){cur.style.left=x+'px';cur.style.top=y+'px';const pr=clickT!=null?1-.15*Math.sin(Math.PI*R(t,clickT,clickT+.18)):1;cur.style.transform=`scale(${pr})`;cur.style.transformOrigin='4px 3px'}
+function ringAt(x,y,t,t0){const p=R(t,t0,t0+.45);if(p<=0||p>=1){vis(clickRing,false);return}vis(clickRing,true);const r=L(10,60,eo(p));px(clickRing,{x:x-r,y:y-r,w:2*r,h:2*r});clickRing.style.borderWidth=L(5,0,p)+'px'}
+
+// ---------- seek ----------
+window.DUR=58.0;
+window.seek=function(t){
+  placeChips();
+  cam=camAt(t);W.style.transform=`translate(960px,540px) scale(${cam[2]}) translate(${-cam[0]}px,${-cam[1]}px)`;
+  // ---- scene 0
+  glow.style.background=`conic-gradient(from ${t*95}deg,#ff4fa3,#ff6a2a,#cdf24f,#3fd8ff,#8b5cf6,#ff4fa3)`;
+  const winP=spr(t-5.0,1.5,.8);const wr=lr(COMP,WIN,cl(winP,0,1.03));
+  vis(win,t>=5.0);px(win,wr);win.style.borderRadius=L(48,36,cl(winP))+'px';winIn.style.left=(WIN.x-wr.x)+'px';winIn.style.top=(WIN.y-wr.y)+'px';
+  glow.style.opacity=t<5?1:L(1,.55,cl(R(t,5,6)));
+  rise(ask,t,.35,.7);if(t>=4.9){ask.s.style.transform=`translateY(${-115*ei(R(t,4.9,5.12))}%)`;vis(ask,t<5.12)}
+  let n=0;for(const ct of ctimes)if(t>=ct)n++;
+  const caret=(t<4.85&&(Math.floor(t*2.2)%2==0||(n>0&&n<PROMPT.length)))?'<span style="display:inline-block;width:3px;height:30px;background:#2f6bff;vertical-align:-5px;margin-left:2px"></span>':'';
+  ctext.innerHTML=t<4.85?(n==0?'<span style="color:#a3a3a8">Give the work…</span>'+caret:PROMPT.slice(0,n)+caret):'<span style="color:#a3a3a8">Message your team…</span>';
+  const pr=1-.12*Math.sin(Math.PI*R(t,4.6,4.85));send.style.transform=`scale(${pr})`;
+  {const p=R(t,4.82,5.35);vis(ripple,p>0&&p<1);const sx=COMP.x+578+32,sy=COMP.y+48,r=L(20,520,eo(p));px(ripple,{x:sx-r,y:sy-r,w:2*r,h:2*r});ripple.style.borderWidth=L(26,0,p)+'px'}
+  {const p=eio(R(t,4.9,5.75));vis(bub,t>=4.9);const src={x:COMP.x+80,y:COMP.y+14,w:480,h:68};const r=lr(src,BUB,p);px(bub,r);bub.style.borderRadius='28px';bub.style.fontSize=L(27,26,p)+'px';bub.style.background=p<1?`color-mix(in srgb,#0e0e10 ${p*100}%,#cdf24f)`:'#0e0e10';bub.style.color=p<.5?'#0e0e10':'#fff'}
+  pmOrb.style.background=orbBG(t*60,'#cdf24f','#2f6bff','#ff4fa3');pop(pmOrb,t,5.75);vis(pmName,t>=5.8);pmName.style.clipPath=`inset(0 ${(1-eo(R(t,5.8,6.2)))*100}% 0 0)`;
+  vis(rep,t>=5.9);rep.innerHTML=t<6.25?'<span style="letter-spacing:6px;color:#8a8a8f">'+'•'.repeat(1+Math.floor((t*8)%3))+'</span>':'On it. Every employee, in order.';
+  rep.style.transform=`scale(${L(.85,1,cl(spr(t-5.9,2.5,.6)))})`;rep.style.transformOrigin='0 50%';
+  vis(pm2,t>=6.35);pm2.style.clipPath=`inset(0 ${(1-eo(R(t,6.35,6.8)))*100}% 0 0)`;
+  // ---- cards
+  const C1=CARDS[0];flood(C1,REP,t,24);cardBase(C1,t);
+  C1.rows.forEach((r,i)=>{const t0=C1.T+.95+i*.11;pop(r,t,t0,'',2.6);r.style.transformOrigin='50% 50%';
+    const ok=t>=C1.T+2.6+i*.17;r.ck.textContent=ok?'✓ Ready':'In order';r.ck.style.background=ok?'#cdf24f':'#f1f1ee';r.ck.style.color=ok?'#0e0e10':'#6b6b70';
+    const hl=i==5&&t>=11.2;r.style.background=hl?'#fff2ea':'#fafaf8';r.style.borderColor=hl?'#ff6a2a':'#e7e6e1';r.style.borderWidth=hl?'4px':'1px';
+    if(hl)r.style.transform=`scale(${1+.05*spr(t-11.2,2.5,.45)})`;});
+  rise(C1.foot,t,C1.T+3.2);
+  const C2=CARDS[1];{const s=C1.rows[5].r;flood(C2,C1.L(s.x,s.y,s.w,s.h),t)};cardBase(C2,t);
+  const pickT=15.35;
+  C2.tiles.forEach((tl,i)=>{const t0=C2.T+.9+[0,1,2,1,2,3,2,3,4][i]*.13;pop(tl,t,t0,'',2.4);
+    if(t>=pickT){tl.style.filter=i==4?'none':`grayscale(${R(t,pickT,pickT+.4)}) opacity(${L(1,.45,R(t,pickT,pickT+.4))})`; if(i==4)tl.style.transform=`scale(${1+.07*spr(t-pickT,2.2,.45)})`}else tl.style.filter='none';});
+  {const r=C2.tiles[4].r;vis(C2.ring,t>=pickT);const g=L(30,12,eo(R(t,pickT,pickT+.35)))*(1+.07);px(C2.ring,{x:r.x-g,y:r.y-g,w:r.w+2*g,h:r.h+2*g});
+   C2.picked.style.left=(r.x+r.w/2-70)+'px';C2.picked.style.top=(r.y-36)+'px';pop(C2.picked,t,pickT+.12,'',2.6);
+   // cursor for pick
+   const A={x:C2.ox+1500,y:C2.oy+980},B={x:C2.ox+r.x+r.w*.62,y:C2.oy+r.y+r.h*.62};const p=eio(R(t,14.5,15.3));
+   if(t>=14.5&&t<17.0){vis(cur,true);curAt(L(A.x,B.x,p)+Math.sin(p*Math.PI)*-60,L(A.y,B.y,p),t,pickT);ringAt(B.x,B.y,t,pickT)}}
+  // C3
+  const C3=CARDS[2];{const r=C2.tiles[4].r;flood(C3,C2.L(r.x,r.y,r.w,r.h),t)};cardBase(C3,t);
+  pop(C3.logoT,t,C3.T+.85,'',2.6);
+  // fly picked logo
+  {const a=C2.tiles[4].r,src=C2.L(a.x+35,a.y+14,400,193),dst=C3.L(C3.LOGO.x,C3.LOGO.y,C3.LOGO.w,C3.LOGO.h);
+   if(!window.fly){window.fly=E(W,'z-index:65;visibility:hidden','<img src="assets/vyra-logo-en.png" style="width:100%;height:100%;object-fit:contain;display:block">','a')}
+   const p=eio(R(t,C3.T+.15,C3.T+1.05));vis(fly,t>=C3.T+.15&&t<C3.T+1.05);px(fly,lr(src,dst,p));vis(C3.logo,t>=C3.T+1.05);}
+  C3.chips.forEach((c,i)=>slideUp(c,t,C3.T+1.15+i*.1,90));
+  pop(C3.type,t,C3.T+1.5,'',2.4);C3.type.style.transformOrigin='0 0';rise(C3.tyH,t,C3.T+1.75,.6);rise(C3.tyB,t,C3.T+2.0,.6);
+  wipe(C3.board,t,C3.T+1.0,.8,'t');C3.board.querySelector('img').style.transform=`scale(${1.08-.08*eo(R(t,C3.T+1,C3.T+4.5))})`;
+  // C4
+  const C4=CARDS[3];flood(C4,{x:C3.ox+C3.VIEW.x,y:C3.oy+C3.VIEW.y,w:C3.VIEW.w,h:C3.VIEW.h},t);cardBase(C4,t);
+  slideUp(C4.self,t,C4.T+.9,120);rise(C4.selfL,t,C4.T+1.2);
+  C4.arrow.querySelector('path').setAttribute('stroke-dashoffset',1-eio(R(t,C4.T+1.4,C4.T+1.9)));vis(C4.arrow,t>=C4.T+1.4);
+  vis(C4.ph,t>=C4.T+1.1);pop(C4.ph,t,C4.T+1.1,'',2.2);C4.ph.style.backgroundPosition=`${-(t*120)%600}px 0`;
+  {const p=eio(R(t,C4.T+1.8,C4.T+3.0));C4.port.style.clipPath=`inset(0 0 ${(1-p)*100}% 0)`;C4.scan.style.top=(p*693-4)+'px';vis(C4.scan,p>0&&p<1);
+   C4.port.querySelector('img').style.transform=`scale(${1.1-.1*eo(R(t,C4.T+1.8,C4.T+4.6))})`}
+  slideUp(C4.portL,t,C4.T+3.0,40);C4.more.forEach((m,i)=>slideUp(m,t,C4.T+3.1+i*.12,60));
+  // C5
+  const C5=CARDS[4];flood(C5,C4.L(800,180,600,693),t,26);cardBase(C5,t);
+  pop(C5.lap,t,C5.T+.85,'',2.2);C5.lap.style.transformOrigin='50% 100%';vis(C5.base,t>=C5.T+.95);C5.base.style.transform=`scaleX(${cl(spr(t-C5.T-.95,2.4,.6),0,1.2)})`;
+  wipe(C5.lapS,t,C5.T+1.1,.7,'l');C5.lapS.querySelector('img').style.transform=`scale(${1.06-.06*eo(R(t,C5.T+1.1,C5.T+4.2))})`;
+  slideUp(C5.phone,t,C5.T+1.45,260);C5.lp.style.top=(-(1245-696)*eio(R(t,C5.T+2.0,C5.T+4.0)))+'px';rise(C5.wL,t,C5.T+1.9);
+  // C6
+  const C6=CARDS[5];flood(C6,C5.L(90,196,1040,537),t,10);cardBase(C6,t);
+  wipe(C6.pl,t,C6.T+.85,.6,'l');C6.pl.querySelector('img').style.transform=`scale(${1.08-.08*eo(R(t,C6.T+.85,C6.T+4.5))})`;
+  pop(C6.play,t,C6.T+1.3,'',2.6);C6.bar.style.width=(1030*eo(R(t,C6.T+1.5,C6.T+4.5))*.42)+'px';
+  rise(C6.ytT,t,C6.T+1.25);slideUp(C6.ch,t,C6.T+1.5,40);rise(C6.nextL,t,C6.T+1.2);C6.items.forEach((g,i)=>slideUp(g,t,C6.T+1.4+i*.15,120));
+  // C7
+  const C7=CARDS[6];{const r=C6.items[2].r;flood(C7,C6.L(r.x,r.y,r.w,r.h),t,16)};cardBase(C7,t);
+  slideUp(C7.x,t,C7.T+.85,140);slideUp(C7.ig,t,C7.T+1.05,140);slideUp(C7.tk,t,C7.T+1.25,140);
+  C7.tki.querySelector('img').style.transform=`scale(${1.12-.12*eo(R(t,C7.T+1.25,C7.T+5))})`;
+  pop(C7.heart,t,C7.T+2.2,'',3);C7.heart.style.transformOrigin='20px 20px';
+  // C8
+  const C8=CARDS[7];flood(C8,C7.L(1200,186,384,700),t,38);cardBase(C8,t);
+  C8.pr.forEach((g,i)=>{slideUp(g,t,C8.T+.85+i*.15,100);wipe(g.im,t,C8.T+1.05+i*.15,.6,'l');g.im.style.borderRadius='22px 22px 0 0';pop(g.av,t,C8.T+1.4+i*.15,'',2.6)});
+  // C9
+  const C9=CARDS[8];{const r=C8.pr[3].r;flood(C9,C8.L(r.x,r.y,r.w,r.h),t)};cardBase(C9,t);
+  slideUp(C9.a1,t,C9.T+.85,120);slideUp(C9.a2,t,C9.T+1.0,120);wipe(C9.bn,t,C9.T+1.2,.6,'l');
+  slideUp(C9.panel,t,C9.T+1.1,80);C9.rows.forEach((r,i)=>{vis(r,t>=C9.T+1.5+i*.15);r.style.clipPath=`inset(0 ${(1-eo(R(t,C9.T+1.5+i*.15,C9.T+1.9+i*.15)))*100}% 0 0)`});
+  {const ok=t>=49.3;C9.stp.style.background=ok?'#cdf24f':'#fff1e8';C9.stp.style.color=ok?'#0e0e10':'#c2410c';C9.stp.innerHTML=ok?'✓ Approved by you':'<span style="width:10px;height:10px;border-radius:5px;background:#ff6a2a;display:inline-block"></span> Waiting for your approval';}
+  rise(C9.note,t,C9.T+2.3,.6);
+  slideUp(C9.apr,t,C9.T+2.0,60);slideUp(C9.edit,t,C9.T+2.1,60);
+  {const ck=48.85;C9.apr.innerHTML=t<ck+.15?'Approve':t<49.3?`<span style="width:30px;height:30px;border-radius:50%;border:4px solid #0e0e1033;border-top-color:#0e0e10;display:inline-block;transform:rotate(${t*900}deg)"></span>`:'✓ Approved';
+   if(t>=ck&&t<ck+.3)C9.apr.style.transform=`scale(${1-.07*Math.sin(Math.PI*R(t,ck,ck+.3))})`;
+   const A={x:C9.ox+1500,y:C9.oy+1000},B={x:C9.ox+C9.APR.x+190,y:C9.oy+C9.APR.y+52};const p=eio(R(t,47.9,48.75));
+   if(t>=47.9&&t<49.75){vis(cur,true);curAt(L(A.x,B.x,p)+Math.sin(p*Math.PI)*80,L(A.y,B.y,p),t,ck);ringAt(B.x,B.y,t,ck)}
+   if(!((t>=14.5&&t<17.0)||(t>=47.9&&t<49.75))){vis(cur,false);vis(clickRing,false)}}
+  // ---- HUD
+  const active=CARDS.filter(C=>t>=C.T+.4).pop();
+  HUD.style.visibility=t>=7.1&&t<50.2?'visible':'hidden';HUD.style.transform=`translateY(${(1-eo(R(t,7.1,7.6)))*70}px)`;
+  hudEls.forEach((h,i)=>{const cur_=active&&active.hud.includes(i),past=active&&i<Math.min(...active.hud);
+    h.style.background=cur_?'#0e0e10':past?'#cdf24f':'#ffffffcc';h.style.color=cur_?'#fff':past?'#0e0e10':'#8a8a8f';h.style.borderColor=cur_?'#0e0e10':past?'#cdf24f':'#e7e6e1';});
+  // ---- approve flood (screen space)
+  {const T0=49.75,T1=50.75;const P=toScreen(C9.ox+C9.APR.x,C9.oy+C9.APR.y);const z=cam[2];
+   const src={x:P.x,y:P.y,w:300*z,h:84*z};const big={x:-140,y:-140,w:2200,h:1360};
+   const shown=t>=T0&&t<53.9;vis(lime,shown);
+   if(shown){let r,rad;
+     if(t<52.75){const p=eio(R(t,T0,T1));r=lr(src,big,p);rad=Math.min(r.h/2,L(42*z,r.h/2,1))*(p<.85?1:L(1,0,R(p,.85,1)))}
+     else{const p=eio(R(t,52.75,53.55));const ep={x:960-310,y:880,w:620,h:84};r=lr(big,ep,p);rad=L(0,42,p)}
+     px(lime,r);lime.style.borderRadius=Math.max(0,rad)+'px'}
+   // label grows then slides away
+   const lp=eio(R(t,T0,T1));vis(limeLab,t>=T0&&t<51.3);const fs=L(28*z,150,lp);limeLab.style.fontSize=fs+'px';
+   const cy=L(P.y+42*z,540,lp)-fs*.6-L(0,760,ei(R(t,50.9,51.3)));limeLab.style.top=cy+'px';limeLab.style.left=L(P.x+150*z-960,0,lp)+'px';
+   rise(w1,t,51.3,.5);rise(w2,t,51.5,.5);
+   const out=ei(R(t,52.55,52.85));[w1,w2].forEach(m=>{if(t>=52.55)m.s.style.transform=`translateY(${-out*115}%)`;if(t>=52.85)vis(m,false)});
+   // end card
+   vis(endBg,t>=52.75);if(t>=52.75){const p=eio(R(t,52.75,53.55));endBg.style.clipPath='none'}
+   const pillOn=t>=53.55;vis(endPill,pillOn);vis(endGlow,pillOn);
+   if(pillOn){px(endPill,{x:960-310,y:880,w:620,h:84});endPill.style.borderRadius='42px';endPill.style.background='#cdf24f';endPill.style.color='#0e0e10';
+     const k=Math.max(0,Math.floor((t-53.8)*24));const s='Give the work. Approve the result.';endPill.innerHTML=s.slice(0,Math.min(s.length,k));
+     px(endGlow,{x:960-350,y:840,w:700,h:164});endGlow.style.background=`conic-gradient(from ${t*95}deg,#ff4fa3,#ff6a2a,#cdf24f,#3fd8ff,#8b5cf6,#ff4fa3)`;endGlow.style.opacity=L(0,1,eo(R(t,53.55,54.2)))}
+   // keep lime above end bg while contracting
+   lime.style.zIndex=3;endBg.style.zIndex=1;endGlow.style.zIndex=2;endPill.style.zIndex=4;
+   if(t>=53.55)vis(lime,false);
+   pop(endLogo,t,53.45,'',1.9);endLogo.style.zIndex=5;endLogo.style.transform+=` translateY(${-12*eo(R(t,53.45,58))}px)`;
+   rise(endT,t,53.9,.6);rise(endS,t,54.25,.6);[endT,endS].forEach(m=>m.style.zIndex=5)}
+  [limeLab,w1,w2].forEach(e=>e.style.zIndex=6);
+};
+document.fonts&&document.fonts.load('700 46px Geist');
+window.seek(0);
+</script></body></html>

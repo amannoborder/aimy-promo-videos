@@ -1,0 +1,351 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#faf7f4}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#15131a}
+#stage{position:absolute;left:0;top:0;width:1080px;height:1920px;overflow:hidden;background:#faf7f4}
+.abs{position:absolute;left:0;top:0;transform-origin:50% 50%;will-change:transform}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.42}
+#grid{position:absolute;inset:0;background-image:radial-gradient(rgba(40,20,60,.10) 2px,transparent 2.5px);background-size:44px 44px}
+#vert{position:absolute;left:46px;top:960px;transform:translate(-50%,-50%) rotate(-90deg);font-size:20px;font-weight:700;letter-spacing:.42em;color:rgba(30,20,40,.38);white-space:nowrap}
+/* titles */
+#ttl{position:absolute;left:84px;top:178px;width:900px;z-index:60}
+#tag{font-size:24px;font-weight:800;letter-spacing:.16em;background:linear-gradient(90deg,#FFB000,#FF4B61,#FF2DBA);-webkit-background-clip:text;color:transparent;display:inline-block}
+#title{font-size:76px;font-weight:800;letter-spacing:-.02em;line-height:1.02;margin-top:8px}
+#sub{font-size:34px;font-weight:600;color:#5b5466;margin-top:12px}
+/* phone */
+#phone{width:460px;height:960px;border-radius:66px;background:#0f0e12;padding:12px;box-shadow:0 60px 120px rgba(60,20,70,.28),0 0 0 2px #2a2830 inset;z-index:10}
+#screen{position:relative;width:436px;height:936px;border-radius:55px;background:#fff;overflow:hidden}
+#island{position:absolute;left:50%;top:14px;width:120px;height:34px;border-radius:20px;background:#0f0e12;transform:translateX(-50%);z-index:5}
+#sbar{position:absolute;top:18px;left:38px;right:34px;font-size:17px;font-weight:700;display:flex;justify-content:space-between}
+#head{position:absolute;top:62px;left:0;right:0;height:84px;border-bottom:1px solid #eee;display:flex;align-items:center;padding:0 20px;gap:14px;background:#fff;z-index:3}
+#head img{width:64px;height:45px}
+#head .tn{font-size:20px;font-weight:800}
+#head .st{font-size:15px;font-weight:600;color:#8a8494;margin-top:2px;white-space:nowrap}
+#head .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;margin-right:6px}
+#chat{position:absolute;top:146px;left:0;right:0;height:690px;overflow:hidden}
+.msg{position:absolute;left:0;right:0;padding:0 16px}
+.u .bub{margin-left:auto;max-width:300px;background:linear-gradient(135deg,#FF8A1F,#FF2DBA);color:#fff;border-radius:22px 22px 6px 22px;padding:14px 18px;font-size:21px;font-weight:600;line-height:1.3}
+.e{display:flex;gap:10px}
+.av{flex:0 0 44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6d5dfc,#c04cf0);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center}
+.e .nm{font-size:16px;font-weight:800;color:#6b6475;margin:2px 0 5px}
+.e .bub{background:#f3f1f6;border-radius:6px 22px 22px 22px;padding:12px 16px;font-size:20px;font-weight:600;line-height:1.3;max-width:330px}
+.e .med{margin-top:8px;border-radius:14px;overflow:hidden;width:300px;background:#eee center/cover no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+#comp{position:absolute;left:14px;right:14px;bottom:30px;height:64px;border-radius:32px;background:#f3f1f6;display:flex;align-items:center;padding:0 10px 0 22px;font-size:20px;font-weight:600;color:#9a94a3;z-index:3}
+#comp .tx{flex:1;white-space:nowrap;overflow:hidden;color:#15131a}
+#comp .send{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#FF8A1F,#FF2DBA);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800}
+/* cards */
+.card{position:absolute;left:0;top:0;border-radius:24px;background:#fff center/cover no-repeat;box-shadow:0 30px 70px rgba(50,20,60,.25),0 0 0 6px #fff;z-index:20;transform-origin:50% 50%}
+.pill{position:absolute;left:0;top:0;height:64px;border-radius:32px;background:#fff;box-shadow:0 18px 40px rgba(50,20,60,.18);display:flex;align-items:center;gap:12px;padding:0 24px 0 10px;font-size:24px;font-weight:700;white-space:nowrap;z-index:20}
+.pill .av{flex:0 0 46px;height:46px}
+.burst{position:absolute;left:0;top:0;z-index:30;pointer-events:none}
+.ring{position:absolute;border-radius:50%;border:6px solid #FF4B61}
+.spark{position:absolute;width:14px;height:14px;border-radius:7px}
+#flash{position:absolute;inset:0;background:#fff;z-index:90;opacity:0}
+.check{z-index:3;position:absolute;right:-16px;top:-16px;width:62px;height:62px;border-radius:50%;background:#22c55e;color:#fff;font-size:36px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+</style></head>
+<body><div id="stage">
+  <div class="blob" id="b1" style="width:760px;height:760px;background:#FFB000"></div>
+  <div class="blob" id="b2" style="width:720px;height:720px;background:#FF2DBA"></div>
+  <div class="blob" id="b3" style="width:640px;height:640px;background:#b7a6ff"></div>
+  <div id="grid"></div>
+  <svg id="rail" class="abs" width="1080" height="1920" style="z-index:2"><defs><linearGradient id="rg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFB000"/><stop offset=".55" stop-color="#FF4B61"/><stop offset="1" stop-color="#FF2DBA" stop-opacity=".2"/></linearGradient></defs><polygon id="railp" fill="url(#rg)" opacity=".55"/><g id="railt"></g></svg>
+  <div id="vert">ONE CHAT · 52 AI EMPLOYEES · VYRA LAUNCH</div>
+  <div id="ttl"><div id="tag"></div><div id="title"></div><div id="sub"></div></div>
+  <div id="world" class="abs" style="width:1080px;height:1920px;z-index:5"></div>
+  <div id="phone" class="abs"><div id="screen">
+    <div id="island"></div>
+    <div id="sbar"><span>9:41</span><span>●●● ▮</span></div>
+    <div id="head"><img src="../en-pack/aimy-logo-dark.png"><div><div class="tn">VYRA launch</div><div class="st"><span class="dot"></span><span id="stt">Ready</span></div></div></div>
+    <div id="chat"></div>
+    <div id="comp"><div class="tx" id="ctx"></div><div class="send">↑</div></div>
+  </div></div>
+  <div id="front" class="abs" style="width:1080px;height:1920px;z-index:15"></div>
+  <div id="fx" class="abs" style="width:1080px;height:1920px;z-index:40;pointer-events:none"></div>
+  <div id="intro" class="abs" style="width:1080px;height:1920px;z-index:70"></div>
+  <div id="end" class="abs" style="width:1080px;height:1920px;z-index:80"></div>
+  <div id="flash"></div>
+</div>
+<script>
+const P='../en-pack/';
+const W=1080,H=1920;
+const cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const eo=p=>1-Math.pow(1-p,3);
+const eio=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+const eb=p=>{const c1=1.5,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2)};
+const $=id=>document.getElementById(id);
+const mk=(parent,html,cls,style)=>{const d=document.createElement('div');if(cls)d.className=cls;if(style)d.style.cssText=style;d.innerHTML=html||'';parent.appendChild(d);return d};
+window.SFX=[];
+const PH={x:540,y:930,w:460,h:960};   // phone center
+
+/* ---------------- scenes ---------------- */
+const SC=[
+ {t0:0,t1:3},
+ {t0:3,t1:7,tag:'THE CHAT',title:'One chat.',sub:'A company of AI employees.',rail:'01'},
+ {t0:7,t1:11,tag:'01 · PROJECT MANAGER',title:'Plans the launch.',sub:'Every employee, in a fixed order.',rail:'01'},
+ {t0:11,t1:15.5,tag:'13 · LOGO',title:'Nine ideas.',sub:'You pick one.',rail:'13'},
+ {t0:15.5,t1:19,tag:'14 · BRAND KIT',title:'The full look.',sub:'Logo, colors, type and photos.',rail:'14'},
+ {t0:19,t1:23,tag:'15 · PORTRAIT',title:'Selfie in.',sub:'Studio portrait out.',rail:'15'},
+ {t0:23,t1:27,tag:'17 · WEBSITE',title:'The landing page.',sub:'Built in the same chat.',rail:'17'},
+ {t0:27,t1:31.5,tag:'21 · 22 · 23 · YOUTUBE',title:'The channel.',sub:'Long video and thumbnails.',rail:'23'},
+ {t0:31.5,t1:36.5,tag:'24 – 29 · SOCIAL',title:'Posts for every app.',sub:'X, Instagram, Threads, TikTok, Facebook.',rail:'28'},
+ {t0:36.5,t1:40,tag:'35 · SNS COVER',title:'Every profile, dressed.',sub:'A cover for each channel.',rail:'35'},
+ {t0:40,t1:47.5,tag:'42 · ADS',title:'The campaign.',sub:'Nothing spends until you approve.',rail:'42'},
+ {t0:47.5,t1:52,tag:'VYRA',title:'One brand, launched.',sub:'Every piece from one chat.',rail:'42'},
+ {t0:52,t1:58},
+];
+window.DUR=58;
+
+/* ---------------- chat ---------------- */
+const chat=$('chat');
+const MS=[];
+function umsg(t,text,h,img,ih){const el=mk(chat,`<div class="bub">${text}</div>`+(img?`<div style="margin:8px 0 0 auto;width:220px;height:${ih}px;border-radius:16px;background:url(${P+img}) center/cover"></div>`:''),'msg u');MS.push({t,el,h});SFX.push({t,k:'pop'})}
+function emsg(t,num,name,text,h,img,ih,pos){const el=mk(chat,`<div class="av">${num}</div><div><div class="nm">${name}</div><div class="bub">${text}${img?`<div class="med" style="height:${ih}px;background-image:url(${P+img});background-position:${pos||'center'}"></div>`:''}</div></div>`,'msg e');MS.push({t,el,h});SFX.push({t,k:'pop'})}
+umsg(3.75,'Launch my home-fitness brand, VYRA.',90);
+emsg(4.6,'01','Project Manager','On it. 52 AI employees, in order.',112);
+emsg(7.3,'01','Project Manager','Plan ready. Here is the order.',112);
+emsg(11.3,'13','Logo','Nine ideas are ready. Pick one.',300,'logo-sheet-nine-en.png',180);
+umsg(13.5,'This one.',70);
+emsg(15.7,'14','Brand Kit','Your brand board is ready.',330,'brandboard-en.jpg',210,'center 20%');
+umsg(19.15,'My selfie',230,'01-original-photo.jpg',150);
+emsg(19.8,'15','Portrait','Studio portrait done.',330,'02-portrait.jpg',210);
+emsg(23.25,'17','Website','Landing page ready to preview.',380,'lp-phone-screen-en.jpg',260,'center 10%');
+emsg(27.25,'23','Thumbnail','Channel set. Three thumbnails.',300,'thumb-en-1.jpg',170);
+emsg(31.7,'24','X · Instagram · TikTok','Posts drafted for every app.',300,'tiktok-en-squat.jpg',170,'center 30%');
+emsg(36.7,'35','SNS Cover','Covers for every profile.',240,'girl-cover-1.png',90);
+emsg(40.25,'42','Ads','Campaign drafted. Waiting for your approval.',140);
+umsg(45.0,'Approved.',70);
+function chatAt(t){
+  const AREA=690;let y=12,ys=[];
+  for(const m of MS){const p=eo(cl((t-m.t)/.35));ys.push(y);y+=(m.h+14)*p}
+  const scroll=Math.max(0,y-AREA+10);
+  MS.forEach((m,i)=>{const p=cl((t-m.t)/.35);if(p<=0){m.el.style.display='none';return}
+    m.el.style.display='';const e=eo(p);
+    m.el.style.transform=`translateY(${ys[i]-scroll+24*(1-e)}px) scale(${.94+.06*e})`;m.el.style.opacity=e;
+    m.el.style.transformOrigin=m.el.classList.contains('u')?'100% 100%':'0 100%';});
+}
+const STT=[[0,'Ready'],[3.8,'01 Project Manager is working'],[11.2,'13 Logo is working'],[15.6,'14 Brand Kit is working'],[19.7,'15 Portrait is working'],[23.1,'17 Website is working'],[27.1,'21–23 YouTube team working'],[31.6,'24–29 Social team working'],[36.6,'35 SNS Cover is working'],[40.1,'42 Ads · waiting for you'],[45.1,'42 Ads · approved']];
+const TYPE='Launch my home-fitness brand, VYRA.';
+
+/* ---------------- world items ---------------- */
+const world=$('world'),fx=$('fx');
+const IT=[];
+const FROM=[540,1180,240,180];
+function card(o){ // o:{t0,t1,to:[cx,cy,w,h],rot,img,html,pos,arc,ex:[dx,dy],z,style,fn,from}
+  const el=mk(o.front?$('front'):world,o.html||'','card',(o.style||'')+(o.img?`;background-image:url(${P+o.img});background-position:${o.pos||'center'}`:''));
+  el.style.width=o.to[2]+'px';el.style.height=o.to[3]+'px';if(o.z)el.style.zIndex=o.z;
+  o.el=el;o.from=o.from||FROM;o.seed=IT.length*1.7;IT.push(o);
+  if(!o.nob)burst(o.t0,o.from[0],o.from[1]);
+  if(!o.nob)SFX.push({t:o.t0,k:'whoosh'});return o;
+}
+function pill(o){o.html=`<div class="av">${o.num}</div>${o.text}`;const it=card(o);it.el.className='pill';it.el.style.height='64px';it.el.style.width='auto';it.auto=true;return it}
+function itemAt(t,o){
+  const el=o.el;if(t<o.t0||t>o.t1+.5){el.style.display='none';return}
+  el.style.display='flex';if(!o.auto)el.style.display='block';
+  const d=o.dur||.8,p=cl((t-o.t0)/d),pe=eo(p),ps=eb(p);
+  const [fx_,fy]=o.from,[tx,ty,w,h]=o.to;
+  let cx=lerp(fx_,tx,pe),cy=lerp(fy,ty,pe)-Math.sin(Math.PI*p)*(o.arc??120);
+  let s=lerp(o.from[2]/w,1,ps), r=lerp(0,o.rot||0,pe);
+  cy+=Math.sin((t-o.t0)*1.7+o.seed)*7*pe; r+=Math.sin((t-o.t0)*1.1+o.seed)*.6*pe;
+  const q=eio(cl((t-o.t1)/.45)),ex=o.ex||[(tx-540)*.8,(ty-930)*.8];
+  cx+=ex[0]*q;cy+=ex[1]*q;s*=1-.35*q;
+  let op=Math.min(cl(p*4),1-q);
+  if(o.fn){const r2=o.fn(t,el,{cx,cy,s,r,op});if(r2){({cx,cy,s,r,op}=Object.assign({cx,cy,s,r,op},r2))}}
+  const ww=o.auto?el.offsetWidth:w;
+  el.style.transform=`translate(${cx-ww/2}px,${cy-h/2}px) rotate(${r}deg) scale(${s})`;el.style.opacity=op;
+}
+/* bursts */
+const BU=[];
+function burst(t,x,y,col){const b=mk(fx,'','burst');const ring=mk(b,'','ring');const sp=[];
+  const cols=['#FFB000','#FF4B61','#FF2DBA','#8a6bff'];
+  for(let i=0;i<16;i++){const s=mk(b,'','spark');s.style.background=cols[i%4];sp.push({s,a:i/16*Math.PI*2+.3*Math.sin(i*7.1),v:220+120*((i*37)%7)/7})}
+  BU.push({t,x,y,b,ring,sp});}
+function burstAt(t,o){const p=(t-o.t)/.7;if(p<0||p>1){o.b.style.display='none';return}o.b.style.display='block';
+  const e=eo(p),R=40+260*e;o.ring.style.cssText=`left:${o.x-R}px;top:${o.y-R}px;width:${2*R}px;height:${2*R}px;opacity:${1-p};border-width:${10*(1-p)+1}px`;
+  o.sp.forEach(q=>{const d=q.v*e;q.s.style.transform=`translate(${o.x+Math.cos(q.a)*d-7}px,${o.y+Math.sin(q.a)*d-7}px) scale(${1.4*(1-p)+.2})`;q.s.style.opacity=1-p});}
+
+/* S2 Project Manager */
+const ROSTER=[['01','Project Manager'],['02','Counseling'],['05','Market Analysis'],['11','Knowledge'],['12','Funnel'],['13','Logo'],['14','Brand Kit'],['15','Portrait'],['17','Website'],['21','YouTube'],['23','Thumbnail'],['42','Ads']];
+const planHtml=`<div style="padding:30px 30px 0"><div style="font-size:20px;font-weight:800;letter-spacing:.14em;color:#FF4B61">THE PLAN</div><div style="font-size:34px;font-weight:800;margin:4px 0 14px">VYRA launch</div>`+ROSTER.map((r,i)=>`<div class="pr" style="display:flex;align-items:center;gap:14px;height:46px;font-size:23px;font-weight:700;border-top:1px solid #f0edf3"><span style="width:38px;color:#a39cae">${r[0]}</span><span style="flex:1">${r[1]}</span><span class="ck" style="width:28px;height:28px;border-radius:50%;background:#22c55e;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center">✓</span></div>`).join('')+`<div style="font-size:20px;font-weight:700;color:#a39cae;padding-top:10px">…and the rest of the 52</div></div>`;
+card({t0:7.7,t1:10.8,to:[850,1010,400,760],rot:4,front:true,html:planHtml,fn:(t,el)=>{el.querySelectorAll('.pr').forEach((r,i)=>{const p=cl((t-8.2-i*.14)/.25);r.style.opacity=.25+.75*p;r.querySelector('.ck').style.transform=`scale(${eb(p)})`})}});
+[['02','Counseling'],['05','Market Analysis'],['11','Knowledge'],['12','Funnel']].forEach((r,i)=>pill({t0:8.0+i*.22,t1:10.8,num:r[0],text:r[1],to:[180-(i%2)*10,640+i*170,330,64],rot:-3+i*2,arc:60,front:true,nob:i>0}));
+
+/* S3 Logo — nine ideas */
+const LG=[];
+for(let i=0;i<9;i++){const c=i%3,r=Math.floor(i/3);
+  const LP=[[170,640],[910,640],[170,900],[540,1500],[910,900],[170,1160],[910,1160],[200,1500],[880,1500]][i];
+  const it=card({t0:11.8+i*.07,t1:i==4?15.2:13.9,to:[LP[0],LP[1],300,190],front:i==4,rot:(i%2?2:-2),nob:i>0,
+    html:`<div style="position:absolute;inset:14px;background:url(${P}logo-sheet-nine-en.png) no-repeat;background-size:300% 300%;background-position:${c*50}% ${[17,50,80][r]}%"></div>`,
+    fn:(t,el,s)=>{ if(i==4){const p=eio(cl((t-13.9)/.7));const ck=el.querySelector('.check');el.querySelector('.pk').style.opacity=p;ck.style.transform=`scale(${eb(cl((t-13.6)/.35))})`;
+        return {cx:lerp(s.cx,540,p),cy:lerp(s.cy,1000,p),s:s.s*lerp(1,2.7,p),r:s.r*(1-p)} }
+      const p=cl((t-13.5)/.4);return {op:s.op*(1-.6*p),s:s.s*(1-.15*p)} }});
+  if(i==4){mk(it.el,'✓','check');it.el.insertAdjacentHTML('beforeend',`<div class="pk" style="position:absolute;inset:0;border-radius:24px;background:#fff url(${P}vyra-logo-en.png) center/84% no-repeat;opacity:0"></div>`)}
+  LG.push(it);}
+SFX.push({t:13.6,k:'tap'});
+
+/* S4 Brand kit */
+card({t0:16.1,t1:18.7,to:[330,1000,500,667],rot:-4,img:'brandboard-en.jpg'});
+card({t0:16.35,t1:18.7,to:[820,760,400,295],rot:5,img:'brand-hero-en.jpg',nob:true});
+[['#FFB000','Energy Orange'],['#FF4B61','VYRA Coral'],['#FF2DBA','VYRA Pink']].forEach((c,i)=>card({t0:16.6+i*.15,t1:18.7,to:[760+(i%2)*60,1050+i*130,300,100],rot:-3+i*3,nob:true,arc:40,
+  html:`<div style="display:flex;align-items:center;gap:14px;height:100%;padding:0 16px"><div style="width:68px;height:68px;border-radius:18px;background:${c[0]}"></div><div><div style="font-size:23px;font-weight:800">${c[1]}</div><div style="font-size:19px;font-weight:600;color:#8a8494">${c[0]}</div></div></div>`}));
+
+/* S5 Portrait */
+card({t0:19.45,t1:22.7,from:[620,1100,200,140],to:[240,760,300,375],rot:-6,img:'01-original-photo.jpg',pos:'center 35%',
+  html:`<div style="position:absolute;left:14px;bottom:14px;background:rgba(0,0,0,.6);color:#fff;font-size:22px;font-weight:700;padding:6px 14px;border-radius:12px">Selfie</div>`});
+card({t0:20.2,t1:22.7,to:[740,880,470,543],rot:4,img:'02-portrait.jpg',
+  html:`<div style="position:absolute;left:14px;bottom:14px;background:linear-gradient(90deg,#FF8A1F,#FF2DBA);color:#fff;font-size:22px;font-weight:700;padding:6px 14px;border-radius:12px">Studio portrait</div>`});
+card({t0:20.5,t1:22.7,from:[400,760,40,40],to:[400,770,110,110],rot:0,nob:true,arc:0,style:'border-radius:50%;box-shadow:0 10px 30px rgba(0,0,0,.2)',
+  html:`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:60px;font-weight:800;color:#FF4B61">→</div>`});
+[1,2,3,4].forEach((n,i)=>card({t0:20.8+i*.12,t1:22.7,to:[180+i*240,1420+(i%2)*30,220,177],rot:-4+i*2.5,img:`07-model-photo-${n}.jpg`,nob:i>0}));
+
+/* S6 Website */
+card({t0:23.65,t1:26.7,to:[540,1400,900,520],rot:-2,nob:false,style:'background:transparent;box-shadow:none',
+  html:`<div style="position:absolute;left:70px;right:70px;top:0;height:446px;background:#111;border-radius:22px 22px 0 0;padding:16px"><div style="width:100%;height:100%;background:url(${P}website-hero-en.jpg) center/cover;border-radius:6px"></div></div><div style="position:absolute;left:0;right:0;top:446px;height:34px;background:linear-gradient(#d9d6de,#b6b2bd);border-radius:0 0 26px 26px;box-shadow:0 30px 60px rgba(50,20,60,.3)"></div>`});
+card({t0:23.95,t1:26.7,to:[885,820,300,640],rot:5,nob:true,style:'overflow:hidden',
+  html:`<div class="lpt" style="position:absolute;left:0;top:0;width:300px;height:1182px;background:url(${P}lp-tall-en.jpg) top/100% auto no-repeat"></div>`,
+  fn:(t,el)=>{el.querySelector('.lpt').style.transform=`translateY(${-eio(cl((t-24.6)/2))*540}px)`}});
+card({t0:24.2,t1:26.7,to:[200,800,250,536],rot:-5,img:'lp-phone-screen-en.jpg',nob:true,style:'border-radius:34px;box-shadow:0 30px 70px rgba(50,20,60,.25),0 0 0 10px #111'});
+
+/* S7 YouTube */
+function yt(img,title,meta){return `<div style="width:100%;aspect-ratio:16/9;background:url(${P+img}) center/cover;border-radius:16px 16px 0 0;position:relative"><div style="position:absolute;left:50%;top:50%;width:84px;height:58px;margin:-29px 0 0 -42px;background:#ff0033;border-radius:16px;display:flex;align-items:center;justify-content:center"><div style="border-left:24px solid #fff;border-top:15px solid transparent;border-bottom:15px solid transparent;margin-left:6px"></div></div></div><div style="display:flex;gap:12px;padding:14px 16px"><div style="width:46px;height:46px;border-radius:50%;background:#fff url(${P}vyra-logo-en.png) center/80% no-repeat;box-shadow:0 0 0 1px #eee"></div><div><div style="font-size:23px;font-weight:800">${title}</div><div style="font-size:18px;font-weight:600;color:#8a8494">${meta}</div></div></div>`}
+card({t0:27.65,t1:31.2,to:[215,700,400,292],front:true,rot:-4,html:yt('thumb-en-1.jpg','Move First. Feel Strong.','VYRA · Thumbnail')});
+card({t0:27.9,t1:31.2,to:[865,1030,400,292],rot:4,front:true,html:yt('thumb-en-2.jpg','Move at Home.','VYRA · Thumbnail'),nob:true});
+card({t0:28.15,t1:31.2,to:[215,1350,400,292],front:true,rot:-2,html:yt('thumb-en-3.jpg','Busy Routine? Reset.','VYRA · Thumbnail'),nob:true});
+card({t0:28.5,t1:31.2,to:[790,1480,420,300],rot:3,nob:true,style:'background:#111',
+  html:`<div style="position:absolute;inset:0;background:url(${P}girl-pose-4.jpg) center 30%/cover;border-radius:24px;opacity:.9"></div><div style="position:absolute;left:18px;top:16px;color:#fff;font-size:21px;font-weight:800;background:rgba(0,0,0,.55);padding:5px 12px;border-radius:10px">22 · Long Video</div><div style="position:absolute;left:18px;right:18px;bottom:22px;height:8px;border-radius:4px;background:rgba(255,255,255,.35)"><div class="pb" style="height:100%;border-radius:4px;background:#ff0033;width:0"></div></div>`,
+  fn:(t,el)=>{el.querySelector('.pb').style.width=(cl((t-28.6)/2.6)*100)+'%'}});
+
+/* S8 Social */
+const ic={x:`<div style="width:44px;height:44px;border-radius:50%;background:#000;color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center">X</div>`};
+function head(app,col){return `<div style="display:flex;align-items:center;gap:12px;padding:16px 18px"><div style="width:48px;height:48px;border-radius:50%;background:#fff url(${P}vyra-logo-en.png) center/80% no-repeat;box-shadow:0 0 0 2px ${col}"></div><div style="flex:1"><div style="font-size:22px;font-weight:800">VYRA</div><div style="font-size:17px;font-weight:600;color:#8a8494">${app}</div></div></div>`}
+card({t0:32.0,t1:36.2,to:[215,700,380,290],rot:-4,front:true,html:head('X · post','#000')+`<div style="padding:0 20px;font-size:26px;font-weight:700;line-height:1.3">Fitness that fits your workday. Start your fitness habit today.</div>`});
+card({t0:32.3,t1:36.2,to:[820,760,400,500],rot:4,nob:true,html:head('Instagram · post','#FF2DBA')+`<div style="height:360px;background:url(${P}girl-pose-1.jpg) center 25%/cover;margin:0 0 0 0"></div><div style="padding:10px 18px;font-size:19px;font-weight:700">Move at Home. Fit into Your Life.</div>`});
+card({t0:32.6,t1:36.2,to:[260,1230,330,587],rot:-3,nob:true,img:'tiktok-en-squat.jpg',style:'border-radius:30px',
+  html:`<div style="position:absolute;left:16px;top:16px;color:#fff;font-size:20px;font-weight:800;background:rgba(0,0,0,.55);padding:5px 12px;border-radius:10px">TikTok · Short Video</div>`});
+card({t0:32.9,t1:36.2,to:[850,1260,380,230],rot:3,nob:true,front:true,html:head('Threads · post','#333')+`<div style="padding:0 20px;font-size:24px;font-weight:700;line-height:1.3">Move First. Feel Strong.</div>`});
+card({t0:33.2,t1:36.2,to:[560,1540,440,250],rot:-2,nob:true,html:`<div style="display:flex;height:100%"><div style="flex:0 0 190px;background:url(${P}girl-pose-3.jpg) center 20%/cover;border-radius:24px 0 0 24px"></div><div>${head('Facebook · post','#1877f2')}<div style="padding:0 18px;font-size:21px;font-weight:700;line-height:1.3">Lighter. Stronger. Train with VYRA.</div></div></div>`});
+
+/* S9 SNS cover */
+function cover(img,app){return `<div style="height:100%;border-radius:24px;background:url(${P+img}) center/cover"></div><div style="position:absolute;left:24px;bottom:-34px;width:84px;height:84px;border-radius:50%;background:#fff url(${P}vyra-logo-en.png) center/78% no-repeat;box-shadow:0 0 0 5px #fff,0 8px 20px rgba(0,0,0,.2)"></div><div style="position:absolute;left:122px;bottom:-30px;font-size:21px;font-weight:800;background:#fff;padding:3px 12px;border-radius:10px">VYRA · ${app}</div>`}
+card({t0:37.0,t1:39.7,to:[520,640,900,246],rot:-3,html:cover('girl-cover-1.png','X header')});
+card({t0:37.25,t1:39.7,to:[580,960,900,246],rot:2,nob:true,html:cover('cover-en-move-your-city.jpg','YouTube banner')});
+card({t0:37.5,t1:39.7,to:[500,1270,900,246],rot:-2,nob:true,html:cover('girl-cover-2.png','Facebook cover')});
+card({t0:37.75,t1:39.7,to:[570,1560,900,246],rot:3,nob:true,html:cover('cover-en-fitness-1.jpg','Threads')});
+
+/* S10 Ads + approval */
+card({t0:40.7,t1:47.2,to:[270,740,430,430],rot:-5,img:'ad-en-vyra-girl.jpg'});
+card({t0:40.95,t1:47.2,to:[810,800,430,430],rot:5,img:'ad-en-busy-routine.jpg',nob:true});
+card({t0:41.2,t1:47.2,to:[540,1110,920,235],rot:-1.5,img:'banner-en.jpg',nob:true});
+const appr=card({t0:42.6,t1:47.2,to:[540,1440,760,330],rot:0,arc:40,front:true,
+  html:`<div style="padding:28px 32px"><div style="display:flex;align-items:center;gap:14px"><div class="av" style="width:52px;height:52px;flex:0 0 52px">42</div><div><div style="font-size:30px;font-weight:800">Campaign draft</div><div class="sts" style="font-size:22px;font-weight:700;color:#d97706">Paused · nothing spends yet</div></div></div>
+  <div style="display:flex;gap:16px;margin-top:28px"><div class="ap" style="flex:1.4;height:84px;border-radius:42px;background:linear-gradient(135deg,#FF8A1F,#FF2DBA);color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;position:relative">Approve</div><div style="flex:1;height:84px;border-radius:42px;background:#f3f1f6;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center">Edit</div></div></div>
+  <div class="rip" style="position:absolute;border-radius:50%;background:rgba(255,255,255,.7)"></div><div class="fing" style="position:absolute;width:56px;height:56px;border-radius:50%;background:rgba(30,20,40,.35);border:4px solid #fff"></div>`,
+  fn:(t,el)=>{const ap=el.querySelector('.ap'),st=el.querySelector('.sts'),f=el.querySelector('.fing'),rp=el.querySelector('.rip');
+    const tap=44.8;const fp=eio(cl((t-43.6)/1.1));
+    f.style.left=lerp(640,220,fp)+'px';f.style.top=lerp(330,160,fp)+'px';f.style.opacity=cl((t-43.5)/.2)*(1-cl((t-45.4)/.3));
+    f.style.transform=`scale(${t>tap&&t<tap+.2?.8:1})`;
+    const rpp=cl((t-tap)/.6);rp.style.cssText=`position:absolute;border-radius:50%;background:rgba(255,255,255,.75);left:${248-160*rpp}px;top:${188-160*rpp}px;width:${320*rpp}px;height:${320*rpp}px;opacity:${rpp>0&&rpp<1?1-rpp:0}`;
+    if(t>=tap){ap.textContent='Approved ✓';ap.style.background='#22c55e';st.textContent='Approved by you';st.style.color='#16a34a'}else{ap.textContent='Approve';ap.style.background='linear-gradient(135deg,#FF8A1F,#FF2DBA)';st.textContent='Paused · nothing spends yet';st.style.color='#d97706'}}});
+SFX.push({t:44.8,k:'tap'},{t:44.85,k:'chime'});
+
+/* S11 finale mosaic */
+const MOS=[['brandboard-en.jpg',175,640,290,387],['ad-en-vyra-girl.jpg',175,1010,290,290],['thumb-en-1.jpg',175,1270,290,163],['girl-pose-2.jpg',190,1540,200,357],
+ ['02-portrait.jpg',905,640,290,335],['website-hero-en.jpg',905,905,290,150],['ad-en-busy-routine.jpg',905,1150,290,290],['lp-phone-screen-en.jpg',900,1520,170,364],
+ ['thumb-en-2.jpg',420,470,230,129],['thumb-en-3.jpg',660,470,230,129],['banner-en.jpg',540,1420,460,117],['girl-cover-2.png',540,1570,460,126],['tiktok-en-squat.jpg',540,1760,0,0]];
+MOS.forEach((m,i)=>{if(!m[3])return;card({t0:47.7+i*.07,t1:51.9,to:[m[1],m[2],m[3],m[4]],rot:((i*53)%7)-3,img:m[0],nob:i>0,ex:[(m[1]-540)*1.6,(m[2]-930)*1.6],
+  fn:(t,el,s)=>({cy:s.cy-cl((t-47.7)/4.3)*40})})});
+/* S1 team orbit */
+['01','02','05','11','12','13','14','15','17','23','28','42'].forEach((n,i)=>{const L=i<6,k=i%6;const x=L?lerp(120,90,Math.sin(k/5*Math.PI)):lerp(960,990,Math.sin(k/5*Math.PI));const y=560+k*150;
+  card({t0:4.75+i*.05,t1:6.75,to:[x,y,110,110],rot:0,nob:i>0,arc:30,style:'border-radius:50%;background:linear-gradient(135deg,#6d5dfc,#c04cf0);box-shadow:0 14px 30px rgba(80,40,140,.3),0 0 0 6px #fff',
+   html:`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:36px;font-weight:800">${n}</div>`})});
+/* logo pick SFX already; end */
+SFX.push({t:52.1,k:'whoosh'},{t:52.7,k:'chime'});
+
+/* ---------------- intro & end ---------------- */
+const intro=$('intro');
+const ipill=mk(intro,"Let's see what's inside.",'', 'position:absolute;left:0;top:0;background:#15131a;color:#fff;font-size:44px;font-weight:800;padding:20px 38px;border-radius:24px;white-space:nowrap');
+const ilogo=mk(intro,`<img src="${P}aimy-logo-dark.png" style="width:100%;height:100%">`,'','position:absolute;left:0;top:0;width:420px;height:296px');
+SFX.push({t:.25,k:'pop'},{t:.75,k:'pop'},{t:2.3,k:'whoosh'});
+const end=$('end');
+const ebg=mk(end,'','','position:absolute;inset:0;background:#faf7f4');
+const eglow=mk(end,'','','position:absolute;left:140px;top:420px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(255,75,97,.22),rgba(255,176,0,.10) 45%,transparent 70%)');
+const elogo=mk(end,`<img src="${P}aimy-logo-dark.png" style="width:100%;height:100%">`,'','position:absolute;left:0;top:0;width:640px;height:451px');
+const el1=mk(end,'52 AI employees. One chat.','','position:absolute;left:0;top:1170px;width:1080px;text-align:center;font-size:58px;font-weight:800;letter-spacing:-.01em');
+const el2=mk(end,'A company of AI employees in one chat.','','position:absolute;left:0;top:1260px;width:1080px;text-align:center;font-size:34px;font-weight:600;color:#5b5466');
+const ein=mk(end,`<span class="tx"></span><span style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#FF8A1F,#FF2DBA);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:800">↑</span>`,'','position:absolute;left:190px;top:1380px;width:700px;height:76px;border-radius:38px;background:#fff;box-shadow:0 16px 40px rgba(50,20,60,.14);display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 32px;font-size:28px;font-weight:600;color:#15131a');
+const ETYPE='Give the work. Approve the result.';
+
+/* rail ticks */
+const railt=$('railt');const RN=['01','02','05','11','12','13','14','15','17','21','22','23','24','25','26','27','28','29','35','42'];
+const RT=RN.map(n=>{const g=document.createElementNS('http://www.w3.org/2000/svg','text');g.textContent=n;g.setAttribute('text-anchor','middle');g.setAttribute('font-size','26');g.setAttribute('font-weight','800');g.setAttribute('font-family','Plus Jakarta Sans');railt.appendChild(g);return g});
+
+/* ---------------- seek ---------------- */
+let lastScene=-1;
+window.seek=function(t){
+  // background
+  $('b1').style.transform=`translate(${-200+Math.sin(t*.21)*120}px,${-150+Math.cos(t*.17)*140}px)`;
+  $('b2').style.transform=`translate(${560+Math.cos(t*.19)*120}px,${1200+Math.sin(t*.23)*160}px)`;
+  $('b3').style.transform=`translate(${520+Math.sin(t*.15)*160}px,${140+Math.cos(t*.2)*120}px)`;
+  $('grid').style.transform=`translateY(${-(t*14)%44}px)`;
+  const si=SC.findIndex(s=>t>=s.t0&&t<s.t1);const sc=SC[si<0?SC.length-1:si];
+  // title
+  const T=$('ttl');
+  if(sc.title){ if(si!==lastScene){$('tag').textContent=sc.tag;$('title').textContent=sc.title;$('sub').textContent=sc.sub;}
+    const pi=eo(cl((t-sc.t0-.1)/.5)),po=eio(cl((t-(sc.t1-.3))/.3));
+    $('tag').style.transform=`translateY(${30*(1-pi)}px)`;$('title').style.transform=`translateY(${50*(1-eo(cl((t-sc.t0-.15)/.5)))-30*po}px)`;
+    $('sub').style.transform=`translateY(${40*(1-eo(cl((t-sc.t0-.25)/.5)))}px)`;$('sub').style.opacity=cl((t-sc.t0-.25)/.4);
+    T.style.opacity=Math.min(pi,1-po);
+  } else T.style.opacity=0;
+  lastScene=si;
+  // vertical label + rail
+  $('vert').style.opacity=cl((t-3.2)/.6)*(1-cl((t-51.8)/.4));
+  const rOp=cl((t-3.2)/.6)*(1-cl((t-47.4)/.4));
+  const rail=$('rail');rail.style.opacity=rOp;
+  $('railp').setAttribute('points',`450,1920 630,1920 ${PH.x+46},1400 ${PH.x-46},1400`);
+  const cur=RN.indexOf(sc.rail||'01');const pos=cur<0?0:cur;
+  // ticks scroll: current station sits at y=1470
+  const prog=(()=>{let k=0;for(let i=1;i<SC.length;i++){const s=SC[i];if(!s.rail)continue;const id=RN.indexOf(s.rail);const p=eio(cl((t-s.t0)/.6));if(t>=s.t0)k=lerp(k,id,p)}return k})();
+  RT.forEach((g,i)=>{const d=i-prog;const y=1480+d*120;const sc2=1/(1+Math.max(0,d)*.25);const x=540;
+    g.setAttribute('x',x);g.setAttribute('y',y);g.setAttribute('fill',Math.abs(d)<.5?'#fff':'rgba(255,255,255,.7)');
+    g.setAttribute('font-size',Math.abs(d)<.5?40:26);g.style.opacity=(y>1440&&y<1940)?1:0});
+  // phone
+  const ph=$('phone');
+  let pcx=PH.x,pcy=PH.y,ps=1,pr=0,pop=1;
+  const pin=eo(cl((t-2.3)/.8));ps=lerp(.18,1,pin);pcy=lerp(1000,PH.y,pin);pop=cl((t-2.3)/.15);
+  pr=Math.sin(t*.6)*.8;
+  // logo scene: picked logo over phone -> fine. Finale shrink
+  const fs=eio(cl((t-47.5)/.8));ps*=lerp(1,.62,fs);pcy=lerp(pcy,1010,fs);
+  const out=eio(cl((t-52)/.7));ps*=1-.4*out;pcy+=900*out;pop*=1-out;
+  // punch at each burst
+  let kick=0;for(const b of BU){const d=t-b.t;if(d>0&&d<.3)kick=Math.max(kick,Math.sin(d/.3*Math.PI)*.02)}
+  ps*=1+kick;
+  ph.style.transform=`translate(${pcx-PH.w/2}px,${pcy-PH.h/2}px) rotate(${pr}deg) scale(${ps})`;ph.style.opacity=pop;
+  // chat
+  chatAt(t);
+  let st='Ready';for(const s of STT)if(t>=s[0])st=s[1];$('stt').textContent=st;
+  const tp=cl((t-3.0)/.7);$('ctx').textContent=t<3.75?TYPE.slice(0,Math.floor(tp*TYPE.length)):'';
+  if(t<3.0||t>=3.75)$('ctx').textContent=t<3?'':'';if(t<3.75&&t>=3.0)$('ctx').textContent=TYPE.slice(0,Math.floor(tp*TYPE.length));
+  if(t>=3.75)$('ctx').innerHTML='<span style="color:#9a94a3">Message your team…</span>';
+  // items
+  IT.forEach(o=>itemAt(t,o));BU.forEach(o=>burstAt(t,o));
+  // intro
+  const ip=eb(cl((t-.2)/.5)),il=eb(cl((t-.65)/.6)),iout=eio(cl((t-2.1)/.6));
+  intro.style.opacity=1-cl((t-2.6)/.3);intro.style.display=t>3?'none':'block';
+  ipill.style.transform=`translate(${540-ipill.offsetWidth/2}px,${640-60*iout}px) scale(${ip*(1-iout)})`;
+  ilogo.style.transform=`translate(${540-210}px,${820}px) scale(${il*lerp(1,.2,iout)})`;ilogo.style.opacity=1-iout*.8;
+  // end
+  end.style.display=t<51.9?'none':'block';
+  const eIn=eio(cl((t-51.9)/.5));ebg.style.opacity=eIn;eglow.style.opacity=eIn;
+  const lp=eb(cl((t-52.5)/.7));elogo.style.transform=`translate(${540-320}px,${560}px) scale(${lp})`;elogo.style.opacity=cl((t-52.5)/.2);
+  const l1=eo(cl((t-53.1)/.5));el1.style.opacity=l1;el1.style.transform=`translateY(${40*(1-l1)}px)`;
+  const l2=eo(cl((t-53.5)/.5));el2.style.opacity=l2;el2.style.transform=`translateY(${40*(1-l2)}px)`;
+  const l3=eo(cl((t-54.0)/.5));ein.style.opacity=l3;ein.style.transform=`translateY(${40*(1-l3)}px)`;
+  ein.querySelector('.tx').textContent=ETYPE.slice(0,Math.floor(cl((t-54.4)/1.4)*ETYPE.length));
+  const fade=cl((t-57.4)/.6);$('flash').style.opacity=fade*0;  // keep clean end
+};
+window.seek(0);
+</script></body></html>

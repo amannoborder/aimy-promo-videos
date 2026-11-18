@@ -1,0 +1,26 @@
+# renders and heavy media stay local
+frames*/
+**/frames*/
+*.png
+!en-pack/*.png
+!**/assets/*.png
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+*.raw
+*.m4a
+*.aac
+backup-jp/
+repo/
+render.lock
+logs/
+pick/
+**/ref/
+**/chk/
+**/qa/
+**/pv*/
+**/prev*/
+**/work/
+**/__pycache__/

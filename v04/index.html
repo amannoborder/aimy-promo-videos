@@ -1,0 +1,367 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=block" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#000;font-family:Inter,system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+#stage{position:absolute;inset:0;overflow:hidden;background:#000}
+.sc{position:absolute;inset:0;opacity:0;will-change:opacity,filter}
+.abs{position:absolute}
+.card{position:absolute;border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.06);background:#fff}
+.card img,.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.grad{background:linear-gradient(90deg,#f6b48e 0%,#ee93bd 45%,#b986ee 80%,#9f7cf2 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pill{position:absolute;left:50%;transform:translateX(-50%);border:1.5px solid #6e2a1c;background:#140a08;border-radius:999px;color:#f3e7e1;font-weight:600;letter-spacing:.17em;font-size:20px;padding:10px 24px;white-space:nowrap;display:flex;align-items:center;gap:12px}
+.pill .dot{width:9px;height:9px;border-radius:50%;background:#ff4a2a;box-shadow:0 0 10px #ff4a2a}
+/* app panes */
+.pane{position:absolute;left:0;top:0;width:900px;height:640px;background:linear-gradient(180deg,#fbfaff,#f1effa);color:#1b1b22;font-size:15px;overflow:hidden}
+.pane .bar{height:34px;background:#f3f1fb;border-bottom:1px solid #e3e0ef;display:flex;align-items:center;padding:0 14px;font-size:12px;color:#55536a;gap:8px}
+.pane .bar b{color:#222;font-weight:600}
+.pane .bar .ctl{margin-left:auto;display:flex;gap:8px}.pane .bar .ctl i{width:10px;height:10px;border:1.5px solid #a9a6bb;border-radius:3px;display:block}
+.pane .main{position:absolute;left:0;top:34px;width:610px;bottom:0;padding:18px 22px;overflow:hidden}
+.pane .side{position:absolute;right:0;top:34px;width:290px;bottom:0;border-left:1px solid #e3e0ef;padding:16px 16px;background:#f8f7fd;overflow:hidden}
+.pane h5{font-size:14px;font-weight:700;margin-bottom:10px;color:#1b1b22}
+.q{border-bottom:1px solid #e6e3f1;padding:8px 0;font-size:12px;line-height:1.35;color:#333}
+.q .tg{display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:5px;margin-right:6px;background:#e7e4fb;color:#5a47c9}
+.q .tg.s{background:#ddf3e4;color:#23874a}.q .tg.d{background:#fde7ef;color:#c03772}
+.q .tm{float:right;color:#8b88a0;font-size:10px}
+.cover{height:170px;border-radius:10px;overflow:hidden;position:relative}
+.cover img{width:100%;height:100%;object-fit:cover}
+.av{width:74px;height:74px;border-radius:50%;background:#fff;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.av img{width:86%;object-fit:contain}
+.post{border:1px solid #e6e3f1;border-radius:10px;padding:10px 12px;margin-top:10px;background:#fff;font-size:13px;line-height:1.4}
+.post .who{font-weight:700;font-size:12px}.post .who span{font-weight:400;color:#888}
+.btn{display:inline-block;border:1px solid #d9d6e8;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:600;background:#fff;margin-right:6px}
+.line{height:8px;border-radius:4px;background:#e4e1ef;margin:7px 0}
+.ig3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.ig3 div{aspect-ratio:1/1;overflow:hidden;background:#ddd}.ig3 img{width:100%;height:100%;object-fit:cover}
+.tk3 div{aspect-ratio:3/4}
+.tile{position:absolute;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.fit{position:absolute;left:0;top:0;transform-origin:0 0}
+</style></head>
+<body><div id="stage"></div>
+<script>
+const P='../en-pack/';
+const DUR=1788/30; window.DUR=DUR;
+const $=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lin=(t,a,b)=>clamp((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, eo2=x=>1-Math.pow(1-x,2);
+const lerp=(a,b,x)=>a+(b-a)*x;
+// in/out envelope: returns [opacity, blur]
+function env(t,i0,i1,o0,o1,bl=18){const a=eo(lin(t,i0,i1)), b=o0==null?1:1-eio(lin(t,o0,o1));const v=Math.min(a,b);return [v,(1-v)*bl];}
+function fx(el,o,b,tr){el.style.opacity=o;el.style.filter=b>0.05?`blur(${b.toFixed(2)}px)`:'none';if(tr!=null)el.style.transform=tr;el.style.visibility=o<=0.001?'hidden':'visible';}
+const stage=document.getElementById('stage');
+function scene(){const s=$('<div class="sc"></div>');stage.appendChild(s);return s;}
+function add(par,html){const e=$(html);par.appendChild(e);return e;}
+const img=(f,pos='center')=>`<img src="${P}${f}" style="object-position:${pos}">`;
+
+/* ---------- app panes (English rebuilds) ---------- */
+function queue(items){return items.map(([tg,c,txt,tm])=>`<div class="q"><span class="tg ${c}">${tg}</span><span class="tm">${tm}</span><br>${txt}</div>`).join('');}
+const QX=[['Scheduled','s','Fifteen minutes, your living room. No commute.','Mon 07:30'],['Draft','d','Busy day? Start with one set of squats.','Mon 12:10'],['Scheduled','s','New: the 15-minute home program for busy professionals.','Tue 08:00'],['Draft','d','Small moves, every day. That is the whole plan.','Tue 19:00'],['Scheduled','s','Stretch break: three moves before your next meeting.','Wed 15:00'],['Draft','d','Start your fitness habit today. #VYRA','Thu 07:30'],['Scheduled','s','Move at home. Fit into your life.','Fri 18:00']];
+function pane(kind){
+  const bars={x:'X post · VYRA Fitness Minutes at Home',ig:'Instagram post · VYRA training with intent',th:'Threads post · VYRA Fitness Minutes at Home',tk:'TikTok post · VYRA Fitness Minutes at Home',fb:'Facebook post · VYRA Facebook Page',ss:'Substack article · Staying focused while working from home',an:'Analytics report · VYRA',mt:'Meeting note · Launch kickoff',ca:'Competitor ads · Home fitness',th2:'Thumbnail studio · YouTube'};
+  let main='',side=`<h5>Post queue</h5>${queue(QX)}`;
+  const vy=`<div class="av"><img src="${P}vyra-logo-en.png"></div>`;
+  if(kind==='x'){main=`<div class="cover">${img('girl-cover-1.png')}</div>
+   <div style="display:flex;align-items:flex-end;gap:12px;margin-top:-30px;padding-left:14px">${vy}<div style="margin-left:auto"><span class="btn">Edit profile</span></div></div>
+   <div style="font-weight:800;font-size:18px;margin-top:6px">VYRA Fitness</div><div style="color:#777;font-size:12px">@vyrafit · Home fitness for busy days</div>
+   <div class="post"><div class="who">VYRA Fitness <span>@vyrafit · 2h</span></div>Fifteen minutes. Your living room. No commute, no gym, just a routine you can start this week. #VYRA</div>
+   <div class="post"><div class="who">VYRA Fitness <span>@vyrafit · 5h</span></div>Busy day? Start with one set of squats. The rest follows.</div>
+   <div class="post"><div class="who">VYRA Fitness <span>@vyrafit · 1d</span></div>New: the 15-minute home program, built for busy professionals.</div>`;}
+  if(kind==='ig'){main=`<div style="display:flex;gap:18px;align-items:center">${vy}<div><div style="font-weight:700;font-size:16px">vyra.fitness</div><div style="font-size:12px;color:#666;margin-top:4px">Move at home. Fit into your life.</div><div style="margin-top:8px"><span class="btn">Edit profile</span><span class="btn">Share profile</span></div></div></div>
+   <div class="ig3" style="margin-top:16px">${['ad-en-vyra-girl.jpg','thumb-en-2.jpg','girl-pose-1.jpg','tiktok-en-squat.jpg','girl-pose-3.jpg','brand-hero-en.jpg','07-model-photo-4.jpg','thumb-en-1.jpg','girl-pose-2.jpg'].map(f=>`<div>${img(f,'center top')}</div>`).join('')}</div>`;}
+  if(kind==='th'){main=`<div style="display:flex;gap:14px;align-items:center"><div><div style="font-weight:800;font-size:18px">Account</div><div style="font-size:12px;color:#777">vyra.fitness</div></div><div style="margin-left:auto">${vy}</div></div>
+   <div style="margin:10px 0"><span class="btn">Edit profile</span><span class="btn">Share profile</span></div>
+   <div style="font-size:12px;color:#666;border-bottom:1px solid #e6e3f1;padding-bottom:6px">Threads &nbsp; Replies &nbsp; Media &nbsp; Reposts</div>
+   <div class="post"><div class="who">vyra.fitness <span>· 2h</span></div>You don't need an hour at the gym. Fifteen minutes at home between meetings is enough to start.
+   <div style="width:250px;height:260px;border-radius:10px;overflow:hidden;margin-top:8px">${img('02-portrait.jpg','center 20%')}</div></div>`;}
+  if(kind==='tk'){main=`<div style="text-align:center"><div style="font-weight:700">vyra.fitness</div><div style="display:flex;justify-content:center;margin:8px 0">${vy}</div><div style="font-size:12px;color:#666">@vyra.fitness</div><div style="margin:8px 0"><span class="btn">Edit profile</span><span class="btn">Share profile</span></div></div>
+   <div class="ig3 tk3">${['tiktok-en-squat.jpg','girl-pose-4.jpg','girl-pose-1.jpg','girl-pose-3.jpg','07-model-photo-2.jpg','girl-pose-2.jpg'].map(f=>`<div>${img(f,'center top')}</div>`).join('')}</div>`;}
+  if(kind==='fb'){main=`<div style="color:#1877f2;font-weight:800;font-size:16px;margin-bottom:6px">facebook</div><div class="cover" style="height:180px">${img('cover-en-move-your-city.jpg')}</div>
+   <div style="display:flex;align-items:flex-end;gap:12px;margin-top:-26px;padding-left:14px">${vy}<div><div style="font-weight:800;font-size:18px">VYRA</div><div style="font-size:12px;color:#777">Home fitness brand · Page</div></div></div>
+   <div style="font-size:12px;color:#666;margin-top:8px;border-bottom:1px solid #e6e3f1;padding-bottom:6px">Posts &nbsp; About &nbsp; Followers &nbsp; Photos</div>
+   <div class="post"><div class="who">VYRA <span>· Just now</span></div>Fit for a brighter tomorrow. Short home workouts built for people with full workdays. No commute, no gym.</div>`;}
+  if(kind==='ss'){main=`<div style="font-weight:800;font-size:22px;line-height:1.2">Staying focused while working from home</div><div style="color:#777;font-size:12px;margin:6px 0 12px">VYRA · 6 min read</div>
+   <p style="font-size:13px;line-height:1.6;color:#333">Working from home removes the commute, but it also removes the edges of the day. The kitchen is close, the phone is within reach, and the hours blur. A fifteen-minute routine gives the day a clear start and a clear stop.</p>
+   <div style="font-weight:700;margin:12px 0 4px">Give your day a clear first task</div><div class="line"></div><div class="line" style="width:90%"></div><div class="line" style="width:70%"></div>
+   <div style="font-weight:700;margin:12px 0 4px">Work in short, fixed blocks</div><div class="line"></div><div class="line" style="width:85%"></div><div class="line" style="width:60%"></div>`;
+   side=`<h5>Outline</h5>${['Give your day a clear first task','Work in short, fixed blocks','Close the doors you can close','Review the day in two minutes'].map(s=>`<div class="q">${s}</div>`).join('')}`;}
+  if(kind==='an'){main=`<div style="font-weight:800;font-size:20px">Social overview</div><div style="font-size:12px;color:#777;margin-bottom:12px">All connected channels · this week</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">${['Posts published','Scheduled','Drafts'].map(s=>`<div class="post" style="margin:0"><div style="font-size:11px;color:#777">${s}</div><div class="line" style="width:50%;height:14px;background:#cfc9ef"></div></div>`).join('')}</div>
+   <div class="post"><div style="font-size:12px;font-weight:700">Posts by platform</div><div style="display:flex;gap:18px;align-items:center;margin-top:8px"><div style="width:90px;height:90px;border-radius:50%;background:conic-gradient(#8b74f0 0 38%,#ee93bd 0 64%,#f6b48e 0 82%,#dcd8ef 0)"></div><div style="flex:1">${['X','Instagram','Threads','TikTok'].map(s=>`<div style="font-size:12px;margin:4px 0">${s}<div class="line" style="margin:2px 0"></div></div>`).join('')}</div></div></div>`;
+   side=`<h5>Notes</h5>${['Instagram drafts ready for review','X schedule set for the week','Threads posts follow the same plan','Ads wait for your approval'].map(s=>`<div class="q">${s}</div>`).join('')}`;}
+  if(kind==='mt'){main=`<div style="font-weight:800;font-size:20px">Meeting note</div><div style="font-size:12px;color:#777;margin-bottom:10px">Launch kickoff · VYRA</div>
+   <div style="font-weight:700;margin-top:6px">Agenda</div><ol style="font-size:13px;line-height:1.7;padding-left:18px;color:#333"><li>Confirm the launch plan and the order of work</li><li>Pick one logo from the nine ideas</li><li>Review the brand board and the landing page</li><li>Approve the first two ads before any spend</li></ol>
+   <div style="font-weight:700;margin-top:10px">Decided</div><div class="line"></div><div class="line" style="width:80%"></div><div style="font-weight:700;margin-top:10px">Next</div><div class="line" style="width:90%"></div><div class="line" style="width:55%"></div>`;
+   side=`<h5>Action items</h5>${['Logo · pick one idea','Brand Kit · final colours','Website · publish draft','Ads · approve or edit'].map(s=>`<div class="q"><span class="tg">To do</span>${s}</div>`).join('')}`;}
+  if(kind==='ca'){main=`<div style="font-weight:800;font-size:20px">Competitor ads</div><div style="font-size:12px;color:#777;margin-bottom:10px">Home fitness · longest running first</div>
+   ${['Studio brand A','Online coach B','Fitness app C','Yoga studio D'].map(s=>`<div class="post"><div class="who">${s} <span>· Active</span></div><div class="line"></div><div class="line" style="width:70%"></div></div>`).join('')}`;
+   side=`<h5>Patterns</h5>${['Short routines lead the copy','Morning and lunch-break angles','Real people, home settings'].map(s=>`<div class="q">${s}</div>`).join('')}`;}
+  if(kind==='th2'){main=`<div class="post" style="margin-top:0;font-size:12px;color:#444"><b>Request:</b> YouTube thumbnail, 16:9, for the fitness brand VYRA. A young woman doing a quick full-body home workout in a bright room, energetic and smiling. Big, bold, clean English headline.</div>
+   <div style="height:310px;border-radius:10px;overflow:hidden;margin-top:12px">${img('thumb-en-1.jpg')}</div>`;
+   side=`<h5>Thumbnails</h5>${['Thumbnail 1 · Move First','Thumbnail 2 · Move at Home','Thumbnail 3 · Busy Routine','Thumbnail 4 · draft','Thumbnail 5 · draft'].map(s=>`<div class="q">${s}</div>`).join('')}`;}
+  return `<div class="pane"><div class="bar"><b>${bars[kind].split(' · ')[0]}</b> · ${bars[kind].split(' · ').slice(1).join(' · ')}<span class="ctl"><i></i><i></i></span></div><div class="main">${main}</div><div class="side">${side}</div></div>`;
+}
+// a tile: image or pane, fitted to w x h
+function tileHTML(c,w,h,extra=''){
+  if(c.startsWith('pane:')){const s=Math.max(w/900,h/640);return `<div class="tile" style="width:${w}px;height:${h}px;${extra}"><div class="fit" style="transform:scale(${s})">${pane(c.slice(5))}</div></div>`;}
+  if(c.startsWith('dark:')){return `<div class="tile" style="width:${w}px;height:${h}px;background:radial-gradient(ellipse at 50% 45%,#2a2a30,#0b0b0e 75%);${extra}"><img src="${P}${c.slice(5)}" style="width:86%;height:auto;object-fit:contain;position:absolute;left:7%;top:50%;transform:translateY(-50%)"></div>`;}
+  if(c.startsWith('phone:')){return `<div class="tile" style="width:${w}px;height:${h}px;background:#111;${extra}"><div style="position:absolute;left:14%;top:6%;width:72%;height:120%;border-radius:40px;border:8px solid #2b2b30;overflow:hidden;background:#000">${img(c.slice(6),'center top')}</div></div>`;}
+  const [f,pos]=c.split('@');return `<div class="tile" style="width:${w}px;height:${h}px;${extra}">${img(f,pos||'center')}</div>`;
+}
+
+/* =============== S1 opening wall 0–3.45 =============== */
+const S1=scene();
+const wall=add(S1,`<div class="abs" style="left:-700px;top:-650px;width:3300px;height:2400px;transform-style:preserve-3d"></div>`);
+const wallItems=['ad-en-vyra-girl.jpg','pane:x','brand-hero-en.jpg','thumb-en-1.jpg','pane:ig','girl-cover-2.png@70% center','website-hero-en.jpg',
+ 'logo-sheet-nine-en.png','pane:fb','phone:lp-phone-screen-en.jpg','banner-en.jpg@20% center','02-portrait.jpg@center 25%','pane:mt','thumb-en-2.jpg',
+ 'pane:an','brandboard-en.jpg@center top','ad-en-busy-routine.jpg','pane:th','girl-cover-1.png@30% center','tiktok-en-squat.jpg@center 30%','cover-en-move-your-city.jpg@60% center',
+ 'thumb-en-3.jpg','dark:vyra-logo-en.png','pane:ss','07-model-photo-1.jpg','pane:tk','lp-tall-en.jpg@center top','view-list-photos.jpg',
+ 'girl-pose-4.jpg@center 20%','pane:ca','sns-cover-concepts-en-ui.jpg@center 10%','ad-en-vyra-girl.jpg@center 20%','pane:x','website-hero-en.jpg@70% center','girl-cover-3.png@40% center'];
+{let k=0;for(let r=0;r<6;r++)for(let c=0;c<7;c++){const it=wallItems[(k++)%wallItems.length];const x=c*460+(r%2)*120,y=r*380;wall.insertAdjacentHTML('beforeend',tileHTML(it,430,350,`left:${x}px;top:${y}px;border-radius:22px`));}}
+const vig=add(S1,`<div class="abs" style="inset:0;background:radial-gradient(ellipse at 55% 45%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)"></div>`);
+
+/* =============== S2 title 3.45–7.15 =============== */
+const S2=scene();
+const p2=add(S2,`<div class="pill" style="top:150px">AIMY · ONE CHAT</div>`);
+const words2=[['THE',0],['AI',1],['EMPLOYEES',1],['YOUR',2],['BUSINESS',2],['IS',2],['MISSING.',2]];
+const l1=add(S2,`<div class="abs" style="left:0;right:0;top:232px;text-align:center;font-weight:800;font-size:106px;letter-spacing:-.045em;line-height:1"></div>`);
+const l2=add(S2,`<div class="abs" style="left:0;right:0;top:340px;text-align:center;font-weight:800;font-size:106px;letter-spacing:-.045em;line-height:1"></div>`);
+const w2=words2.map(([w,g],i)=>{const e=$(`<span style="display:inline-block;margin:0 .12em" class="${g==1?'grad':''}">${w}</span>`);(i<3?l1:l2).appendChild(e);return e;});
+w2[1].style.background='linear-gradient(90deg,#f6b48e,#f2a6a6)';w2[1].style.webkitBackgroundClip='text';
+w2[2].style.background='linear-gradient(90deg,#f0a3ad,#e990c3 40%,#b98aee 100%)';w2[2].style.webkitBackgroundClip='text';
+const sub2=add(S2,`<div class="abs" style="left:0;right:0;top:500px;text-align:center;font-size:32px;font-weight:300;color:#a9a9ae">Give the work in one chat. <b style="color:#fff;font-weight:500">52 AI employees</b> do it, in a fixed order.</div>`);
+const chips=add(S2,`<div class="abs" style="left:0;right:0;top:582px;display:flex;justify-content:center;gap:18px">${[['Logo','#f6b48e'],['Website','#ee7fb6'],['Instagram','#b98aee'],['Ads','#8f7cf2']].map(([n,c])=>`<div style="background:#121214;border:1px solid #2a2a2e;border-radius:9px;padding:11px 22px;font-size:21px;color:#e8e8ea;display:flex;align-items:center;gap:12px"><span style="width:8px;height:8px;border-radius:50%;background:${c}"></span>${n}</div>`).join('')}</div>`);
+const strip=add(S2,`<div class="abs" style="left:0;top:740px;height:330px;width:6000px"></div>`);
+['pane:x','brandboard-en.jpg@center 2%','ad-en-vyra-girl.jpg@center 15%','pane:ig','website-hero-en.jpg','thumb-en-2.jpg','pane:fb','girl-cover-2.png@35% center','pane:th','brand-hero-en.jpg','pane:tk','thumb-en-1.jpg','pane:x','brandboard-en.jpg@center 2%'].forEach((c,i)=>strip.insertAdjacentHTML('beforeend',tileHTML(c,408,330,`left:${i*430}px;top:0;border-radius:12px`)));
+
+/* =============== S3 chat 7.15–12.75 =============== */
+const S3=scene();
+const c3a=add(S3,`<div class="abs" style="left:110px;top:440px;font-size:66px;font-weight:700;letter-spacing:-.035em">One chat.</div>`);
+const c3b=add(S3,`<div class="abs" style="left:110px;top:512px;font-size:66px;font-weight:300;letter-spacing:-.035em;color:#c4c4c8">No team to hire.</div>`);
+const c3c=add(S3,`<div class="abs" style="left:110px;top:608px;font-size:25px;font-weight:400;color:#8d8d93;line-height:1.38">Type the work once. Your AI employees<br>take it from there, one after another.</div>`);
+const win3=add(S3,`<div class="abs" style="left:790px;top:200px;width:1010px;height:560px;background:#0c0c0d;border:1px solid #232326;border-radius:18px">
+ <div style="height:46px;border-bottom:1px solid #1d1d20;display:flex;align-items:center;padding:0 18px;gap:9px"><i style="width:13px;height:13px;border-radius:50%;background:#ff5f57;display:block"></i><i style="width:13px;height:13px;border-radius:50%;background:#febc2e;display:block"></i><i style="width:13px;height:13px;border-radius:50%;background:#28c840;display:block"></i><span style="position:absolute;left:0;right:0;text-align:center;color:#8a8a90;font-size:15px">AIMY — chat</span></div></div>`);
+const typed=add(win3,`<div class="abs" style="left:34px;top:80px;font-size:22px;color:#e9e9ec"></div>`);
+const ck='<svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:-2px"><path d="M3 9.5l4 4 8-9" stroke="#4fd18b" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+const dotc=c=>`<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c};vertical-align:-2px"></span>`;
+function row(y){const e=add(win3,`<div class="abs" style="left:34px;top:${y}px;font-size:22px;color:#cfcfd4;white-space:nowrap"></div>`);return e;}
+const r1=row(140),r2=row(190),r3=row(240),r4=row(292);
+const cardA=add(S3,`<div class="card" style="left:1045px;top:600px;width:340px;height:340px">${img('logo-sheet-nine-en.png')}</div>`);
+const cardB=add(S3,`<div class="card" style="left:1250px;top:640px;width:300px;height:400px">${img('brandboard-en.jpg','center top')}</div>`);
+const cardC=add(S3,`<div class="card" style="left:1440px;top:580px;width:300px;height:380px">${img('lp-tall-en.jpg','center top')}</div>`);
+
+/* =============== S4 MEET 12.75–15.7 =============== */
+const S4=scene();
+const p4=add(S4,`<div class="pill" style="top:330px;letter-spacing:.12em">MEET</div>`);
+const s4=add(S4,`<div class="abs" style="left:0;right:0;top:400px;text-align:center;font-size:33px;font-weight:300;color:#d8d8dc">a company of AI employees, in one chat</div>`);
+const lg4=add(S4,`<img class="abs" src="${P}aimy-logo-white.png" style="left:710px;top:478px;width:500px;height:auto">`);
+
+/* =============== S5 Inside, you get 15.7–17.85 =============== */
+const S5=scene();
+const neb=add(S5,`<div class="abs" style="inset:0;background:radial-gradient(ellipse 900px 700px at 42% 55%,#16204a 0%,rgba(10,14,40,.6) 45%,rgba(0,0,0,0) 80%),radial-gradient(ellipse 600px 520px at 80% 22%,#2a1d4c 0%,rgba(20,10,40,0) 70%),#05060d"></div>`);
+{let h='';let s=7;const R=()=>{s=(s*9301+49297)%233280;return s/233280;};for(let i=0;i<160;i++)h+=`<i style="position:absolute;left:${R()*1920}px;top:${R()*1080}px;width:2px;height:2px;border-radius:50%;background:rgba(255,255,255,${.2+R()*.5})"></i>`;neb.insertAdjacentHTML('beforeend',h);}
+const t5=add(S5,`<div class="abs" style="left:0;right:0;top:470px;text-align:center;font-size:104px;letter-spacing:-.03em;white-space:nowrap"></div>`);
+const w5=[['Inside,','grad',150],['you','',700],['get','',700]].map(([w,c,f])=>{const e=$(`<span class="${c}" style="display:inline-block;font-weight:${f};margin:0 .13em;color:${c?'':'#f2f2f4'}">${w}</span>`);t5.appendChild(e);return e;});
+
+/* =============== S6 counter 17.85–24.25 =============== */
+const S6=scene();
+const p6=add(S6,`<div class="pill" style="top:222px"><span class="dot"></span>AI EMPLOYEES · IN ONE CHAT</div>`);
+const DH=300;
+const cnt=add(S6,`<div class="abs" style="left:760px;top:300px;width:400px;height:${DH}px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 12%,#000 88%,transparent 100%)"></div>`);
+function strip6(n,left){let h='';for(let i=0;i<n;i++)h+=`<div style="height:${DH}px;line-height:${DH}px;font-size:330px;font-weight:500;letter-spacing:-.04em;text-align:center">${i%10}</div>`;return add(cnt,`<div class="abs" style="left:${left}px;top:0;width:200px"></div>`).appendChild($(`<div>${h}</div>`)).parentNode;}
+const tensS=strip6(7,0), onesS=strip6(11,190);
+const big52=add(S6,`<div class="abs grad" style="left:760px;top:300px;width:400px;height:${DH}px;line-height:${DH}px;font-size:330px;font-weight:500;letter-spacing:-.04em;text-align:center;padding-left:10px;text-shadow:none">52</div>`);
+const glow=add(S6,`<div class="abs" style="left:610px;top:250px;width:700px;height:420px;background:radial-gradient(ellipse at center,rgba(238,147,189,.22),rgba(0,0,0,0) 65%)"></div>`);
+const parts=add(S6,`<div class="abs" style="left:0;top:0;width:1920px;height:1080px"></div>`);
+const PR=[];{let s=3;const R=()=>{s=(s*9301+49297)%233280;return s/233280;};for(let i=0;i<170;i++){const a=R()*Math.PI*2,d=170+R()*190,cl=['#f6b48e','#ee93bd','#b986ee','#8f9cf2','#ffffff'][i%5];const e=add(parts,`<i style="position:absolute;width:${2+R()*3}px;height:${2+R()*3}px;background:${cl};border-radius:1px"></i>`);PR.push([e,a,d,R()]);}}
+const names=['Project Manager','Counseling','Self Analysis','Customer Analysis','Market Analysis','Competitor','Concept','Product','Online Course','Scheduling','Knowledge','Funnel','Logo','Brand Kit','Portrait','Writing','Website','LINE','Customer Mgmt','Lead Magnet','YouTube','Long Video','Thumbnail','X','Instagram','Short Video','Threads','TikTok','Facebook','Substack','Post Manager','Topic Search','Podcast','Web Design','SNS Cover','Sales Script','Email','Launch','Slides','Seminar','Sales','Ads','Competitor Ads','Analytics','Community','Customer Support','Meeting','Accounting','Legal','LinkedIn','WhatsApp','Image Post'];
+const tick=add(S6,`<div class="abs" style="left:0;top:665px;width:1920px;height:60px"></div>`);
+const tk=names.map((n,i)=>add(tick,`<div class="abs" style="top:0;white-space:nowrap;font-size:30px;transform:translateX(-50%)"><span style="font-size:21px;color:#8a8a90">#${i+1}</span> ${n}</div>`));
+const PTS=[];{let s=11;const R=()=>{s=(s*9301+49297)%233280;return s/233280;};for(let i=0;i<=52;i++){PTS.push([i/52*1640,1040-300*Math.pow(i/52,1.55)-(i%3==0?0:R()*8)]);}}
+const chart=add(S6,`<svg class="abs" style="left:0;top:0" width="1920" height="1080"><defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#f6b48e"/><stop offset=".5" stop-color="#e48fc6"/><stop offset="1" stop-color="#8f7cf2"/></linearGradient><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2150" stop-opacity=".55"/><stop offset="1" stop-color="#0b0a18" stop-opacity="0"/></linearGradient></defs><path id="ca" fill="url(#fg)"/><path id="cl" fill="none" stroke="url(#lg)" stroke-width="4" stroke-linejoin="round"/><circle id="cd" r="9" fill="#f2f2f4"/></svg>`);
+const tag6=add(S6,`<div class="abs" style="left:0;right:0;top:668px;text-align:center;font-size:44px;font-weight:500;letter-spacing:-.02em">AI employees in <span class="grad" style="font-weight:300">one chat.</span></div>`);
+
+/* =============== S7 outputs window 24.25–29.95 =============== */
+const S7=scene();
+const cam7=add(S7,`<div class="abs" style="left:0;top:0;width:1920px;height:1080px;transform-origin:960px 540px"></div>`);
+const win7=add(cam7,`<div class="abs" style="left:360px;top:120px;width:1200px;height:1330px;background:#0f0f11;border:1px solid #26262a;border-radius:20px;overflow:hidden">
+ <div style="height:46px;border-bottom:1px solid #1e1e22;display:flex;align-items:center;padding:0 18px;gap:9px"><i style="width:13px;height:13px;border-radius:50%;background:#ff5f57;display:block"></i><i style="width:13px;height:13px;border-radius:50%;background:#febc2e;display:block"></i><i style="width:13px;height:13px;border-radius:50%;background:#28c840;display:block"></i><span style="position:absolute;left:0;right:0;text-align:center;color:#8a8a90;font-size:15px">AIMY — VYRA · outputs</span></div>
+ <div style="height:70px;display:flex;align-items:center;padding:0 28px;gap:16px"><img src="${P}aimy-logo-white.png" style="width:52px"><span style="font-size:18px;color:#bdbdc2">VYRA home fitness · 52 employees</span><span style="margin-left:auto;display:flex;gap:10px;font-size:15px">${['Chat','Outputs','Employees'].map(s=>`<span style="border:1px solid ${s=='Outputs'?'#5a5a60':'#2a2a2e'};border-radius:9px;padding:7px 14px;color:${s=='Outputs'?'#fff':'#c9c9ce'}">${s}</span>`).join('')}</span></div></div>`);
+const G7=[['logo-sheet-nine-en.png','#13','Logo'],['brandboard-en.jpg@center 3%','#14','Brand Kit'],['view-list-photos.jpg','#15','Portrait'],['website-hero-en.jpg@75% center','#17','Website'],
+ ['thumb-en-1.jpg','#23','Thumbnail'],['pane:x','#24','X'],['pane:ig','#25','Instagram'],['pane:th','#27','Threads'],
+ ['pane:tk','#28','TikTok'],['pane:fb','#29','Facebook'],['pane:ss','#30','Substack'],['girl-cover-2.png@40% center','#35','SNS Cover'],
+ ['ad-en-vyra-girl.jpg@center 20%','#42','Ads'],['pane:ca','#43','Competitor Ads'],['pane:an','#44','Analytics'],['pane:mt','#47','Meeting']];
+G7.forEach(([c,n,l],i)=>{const x=28+(i%4)*286,y=118+Math.floor(i/4)*266;win7.insertAdjacentHTML('beforeend',`<div class="abs" style="left:${x}px;top:${y}px;width:271px;height:251px;background:#18181b;border:1px solid #26262a;border-radius:10px;overflow:hidden">${tileHTML(c,271,210,'left:0;top:0;border-radius:0;box-shadow:none')}<div class="abs" style="left:14px;top:216px;font-size:17px;color:#e6e6e9"><span style="color:#7d7d84">${n}</span>&nbsp; ${l}</div></div>`);});
+
+/* =============== S8 employees at work 29.95–41.7 =============== */
+const S8=scene();
+const p8=add(S8,`<div class="pill" style="top:118px"><span class="dot"></span>EMPLOYEES AT WORK · IN ORDER</div>`);
+const RAIL=[[5,'Market Analysis'],[11,'Knowledge'],[12,'Funnel'],[13,'Logo'],[14,'Brand Kit'],[15,'Portrait'],[17,'Website'],[21,'YouTube'],[22,'Long Video'],[23,'Thumbnail'],[24,'X'],[25,'Instagram'],[26,'Short Video'],[27,'Threads'],[28,'TikTok'],[29,'Facebook'],[35,'SNS Cover'],[42,'Ads']];
+const rail=add(S8,`<div class="abs" style="left:0;top:190px;width:1920px;height:50px"></div>`);
+const rl=RAIL.map(([n,s])=>add(rail,`<div class="abs" style="top:0;white-space:nowrap;font-size:29px;transform:translateX(-50%)"><span class="ck" style="display:inline-block;width:0;overflow:hidden;vertical-align:-1px">${ck.replace('18','26').replace('18','26')}</span><span style="font-size:21px;color:#7f7f86">#${n}</span> <span class="nm">${s}</span></div>`));
+const left8=add(S8,`<div class="abs" style="left:110px;top:425px;width:640px"><div class="num" style="font-size:26px;color:#8a8a90"></div><div class="ttl" style="font-size:74px;font-weight:700;letter-spacing:-.04em;line-height:1.04;margin-top:10px"></div><div class="sub" style="font-size:30px;font-weight:300;color:#a4a4aa;line-height:1.35;margin-top:22px"></div></div>`);
+const SUB=[ // t0,t1,num,title,sub,railFrom,railTo
+ [30.0,31.75,'#13','Logo','Draws nine ideas.<br>You pick one.',3,3],
+ [31.75,33.4,'#14','Brand Kit','One brand board: colours,<br>fonts, logo versions.',4,4],
+ [33.4,35.0,'#15','Portrait','A selfie in.<br>A studio portrait out.',5,5],
+ [35.0,36.6,'#17','Website','Builds the landing page.',6,6],
+ [36.6,38.2,'#21–23','YouTube ·<br>Thumbnail','Videos and thumbnails<br>that get the click.',7,9],
+ [38.2,39.8,'#24–29','X · Instagram ·<br>TikTok','Posts to every channel,<br>every day.',10,15],
+ [39.8,41.7,'#35','SNS Cover','A cover for every profile.',16,16]];
+const grp=SUB.map(()=>add(S8,`<div class="abs" style="inset:0"></div>`));
+// logo
+const g0a=add(grp[0],`<div class="card" style="left:840px;top:270px;width:570px;height:590px;transform:rotate(-3deg)">${img('logo-sheet-nine-en.png')}</div>`);
+const g0b=add(grp[0],`<div class="card" style="left:1240px;top:525px;width:580px;height:310px;background:radial-gradient(ellipse at 50% 45%,#26262c,#08080a 75%);transform:rotate(3deg)"><img src="${P}vyra-logo-en.png" style="width:84%;position:absolute;left:8%;top:50%;transform:translateY(-50%)"></div>`);
+// brand kit
+const g1a=add(grp[1],`<div class="card" style="left:880px;top:250px;width:640px;height:740px;transform:rotate(-2deg)">${img('brandboard-en.jpg','center top')}</div>`);
+const g1b=add(grp[1],`<div class="card" style="left:1430px;top:300px;width:390px;height:400px;transform:rotate(4deg)"><div style="font-size:11px;color:#666;padding:6px 10px;background:#f5f4fa">Logo ideas · VYRA</div><img src="${P}logo-sheet-nine-en.png" style="width:100%;height:calc(100% - 26px);object-fit:cover"></div>`);
+// portrait
+const g2=[['07-model-photo-1.jpg',850,255,290,235,-3],['07-model-photo-2.jpg',892,500,285,228,2],['07-model-photo-3.jpg',855,742,280,225,-2]].map(([f,x,y,w,h,r])=>add(grp[2],`<div class="card" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${r}deg);border:5px solid #f3f3f3">${img(f,'center 25%')}</div>`));
+const g2b=add(grp[2],`<div class="card" style="left:1285px;top:235px;width:520px;height:600px;transform:rotate(2.5deg)">${img('02-portrait.jpg','center 30%')}</div>`);
+// website
+const g3a=add(grp[3],`<div class="card" style="left:845px;top:222px;width:720px;height:790px;transform:rotate(-1.8deg)">${img('lp-tall-en.jpg','center top')}</div>`);
+const g3b=add(grp[3],`<div class="card" style="left:1475px;top:305px;width:330px;height:610px;border-radius:44px;background:#1b1b1f;padding:10px;transform:rotate(4deg)"><div style="width:100%;height:100%;border-radius:36px;overflow:hidden">${img('lp-phone-screen-en.jpg','center top')}</div></div>`);
+// youtube/thumb
+const g4a=add(grp[4],`<div class="card" style="left:845px;top:235px;width:640px;height:560px;transform:rotate(-2.5deg)"><div class="fit" style="transform:scale(.7111,.875)">${pane('th2')}</div></div>`);
+const g4b=add(grp[4],`<div class="card" style="left:1230px;top:528px;width:585px;height:330px;transform:rotate(4deg)">${img('thumb-en-2.jpg')}</div>`);
+// socials
+const g5=[['x',800,215,500,450,-3],['ig',1075,315,520,420,-1],['th',1345,225,490,370,2],['tk',990,575,500,430,2],['fb',1335,590,510,440,-2]].map(([k,x,y,w,h,r])=>add(grp[5],`<div class="card" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${r}deg)"><div class="fit" style="transform:scale(${w/900},${h/640})">${pane(k)}</div></div>`));
+// covers
+const g6=[['girl-cover-1.png',828,225,900,250,-3],['cover-en-move-your-city.jpg',890,490,900,250,2.5],['girl-cover-2.png',830,770,900,250,-2]].map(([f,x,y,w,h,r])=>add(grp[6],`<div class="card" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${r}deg)">${img(f)}</div>`));
+const GCARDS=[[g0a,g0b],[g1a,g1b],[...g2,g2b],[g3a,g3b],[g4a,g4b],g5,g6];
+const GDEL=[[0,.55],[0,.5],[.05,.18,.31,.6],[0,.4],[0,.4],[0,.15,.3,.45,.6],[0,.25,.45]];
+
+/* =============== S9 52 working one plan 41.7–45.7 =============== */
+const S9=scene();
+const cols9=add(S9,`<div class="abs" style="left:850px;top:-200px;width:1200px;height:1500px;transform:perspective(2200px) rotateY(-9deg) rotateZ(-2deg)"></div>`);
+const C9=[['brandboard-en.jpg@center 3%','dark:vyra-logo-en.png','website-hero-en.jpg','pane:tk','girl-cover-1.png','pane:mt','thumb-en-1.jpg'],
+ ['pane:x','pane:ig','02-portrait.jpg@center 25%','ad-en-vyra-girl.jpg','pane:fb','girl-pose-3.jpg@center 20%','pane:an'],
+ ['lp-tall-en.jpg@center top','pane:th','brand-hero-en.jpg','tiktok-en-squat.jpg@center 25%','pane:ss','thumb-en-3.jpg','pane:ca']];
+const colEls=C9.map((list,ci)=>{const c=add(cols9,`<div class="abs" style="left:${ci*450}px;top:0;width:420px"></div>`);let y=0;for(let k=0;k<2;k++)list.forEach((it,j)=>{const h=[300,330,310,340,280,320,300][(j+ci)%7];c.insertAdjacentHTML('beforeend',tileHTML(it,420,h,`left:0;top:${y}px`));y+=h+22;});c.dataset.h=y/2;return c;});
+const t9=add(S9,`<div class="abs" style="left:110px;top:385px;font-size:74px;letter-spacing:-.04em;line-height:1.1"><div class="a" style="font-weight:700">52 AI employees</div><div class="b" style="font-weight:700">working one plan,</div><div class="c grad" style="font-weight:300;padding-bottom:8px">in a fixed order.</div></div>`);
+const t9l=[...t9.children];
+const shade9=add(S9,`<div class="abs" style="left:0;top:0;width:900px;height:1080px;background:linear-gradient(90deg,#000 80%,rgba(0,0,0,0))"></div>`);
+t9.remove();S9.appendChild(t9);
+
+/* =============== S10 To every … 45.7–51.25 =============== */
+const S10=scene();
+const te=add(S10,`<div class="abs" style="left:0;right:0;top:370px;text-align:center;font-size:72px;font-weight:700;letter-spacing:-.035em;color:#e2e2e6">To every</div>`);
+const W10=['founder.','creator.','small team.'].map(w=>add(S10,`<div class="abs grad" style="left:0;right:0;top:470px;text-align:center;font-size:210px;font-weight:200;letter-spacing:-.05em;line-height:1.05;padding-bottom:30px">${w}</div>`));
+const CARD10=[
+ [['brand-hero-en.jpg',80,60,530,370,-4],['brandboard-en.jpg@center 3%',1320,130,520,340,4],['dark:vyra-logo-en.png',1275,680,470,300,3]],
+ [['thumb-en-2.jpg',30,40,500,290,-5],['girl-cover-2.png@30% center',1330,40,560,300,5],['pane:x',1300,560,440,320,-3]],
+ [['pane:mt',40,40,500,330,-4],['ad-en-vyra-girl.jpg@center 20%',1440,40,420,400,5],['pane:an',1340,620,420,300,-3]]];
+const c10=CARD10.map(set=>set.map(([c,x,y,w,h,r])=>{const e=$(tileHTML(c,w,h,`left:${x}px;top:${y}px;border-radius:16px`));S10.appendChild(e);e.dataset.r=r;return e;}));
+
+/* =============== S11 Ads 51.25–55.45 =============== */
+const S11=scene();
+const t11=add(S11,`<div class="abs" style="left:110px;top:400px"><div style="font-size:26px;color:#8a8a90">#42 Ads</div><div style="font-size:74px;font-weight:700;letter-spacing:-.04em;margin-top:10px;line-height:1.1">Nothing spends</div><div class="grad u2" style="font-size:74px;font-weight:300;letter-spacing:-.04em;line-height:1.1;padding-bottom:10px">until you approve.</div></div>`);
+const ad1=add(S11,`<div class="card" style="left:868px;top:148px;width:440px;height:440px;transform:rotate(-4deg)">${img('ad-en-vyra-girl.jpg')}</div>`);
+const ad2=add(S11,`<div class="card" style="left:1350px;top:185px;width:440px;height:440px;transform:rotate(3.5deg)">${img('ad-en-busy-routine.jpg')}</div>`);
+const bar11=add(S11,`<div class="abs" style="left:880px;top:690px;width:910px;height:150px;background:#0c0c0d;border:1px solid #25252a;border-radius:16px">
+ <div style="position:absolute;left:36px;top:32px;font-size:24px;color:#e5e5e8"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#ee93bd;vertical-align:-2px;margin-right:10px"></span><b style="font-weight:600">Ads</b> · 2 ads ready for review</div>
+ <div class="st" style="position:absolute;left:36px;top:84px;font-size:20px;color:#8d8d93">Budget is on hold until you say yes.</div>
+ <div class="bt" style="position:absolute;right:30px;top:42px;width:164px;height:66px;border-radius:10px;background:#f4f4f6;color:#111;font-size:24px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px">Approve</div></div>`);
+const bt=bar11.querySelector('.bt'), st=bar11.querySelector('.st');
+const cur=add(S11,`<svg class="abs" width="34" height="40" viewBox="0 0 34 40" style="left:0;top:0"><path d="M3 2l0 30 8-7 6 13 6-3-6-12 11 0z" fill="#111" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>`);
+
+/* =============== S12 end card 55.45–59.6 =============== */
+const S12=scene();
+const stars=add(S12,`<div class="abs" style="inset:0"></div>`);
+const ST=[];{let s=5;const R=()=>{s=(s*9301+49297)%233280;return s/233280;};for(let i=0;i<520;i++){const cl=['#ffffff','#f6b48e','#b986ee','#8f9cf2','#ee93bd'][i%5];const e=add(stars,`<i style="position:absolute;width:${2+R()*2.5}px;height:${2+R()*2.5}px;background:${cl};opacity:${.25+R()*.6}"></i>`);ST.push([e,R()*1920,R()*1080,(R()-.5)*30,(R()-.5)*20]);}}
+const lg12=add(S12,`<img class="abs" src="${P}aimy-logo-white.png" style="left:774px;top:296px;width:372px">`);
+const tg12=add(S12,`<div class="abs" style="left:0;right:0;top:590px;text-align:center;font-size:50px;font-weight:300;letter-spacing:-.025em"><span class="grad" style="font-weight:600">52</span> AI employees. One chat.</div>`);
+const pl12=add(S12,`<div class="abs" style="left:764px;top:690px;width:392px;height:48px;border:1px solid #2c2c31;background:#101012;border-radius:999px;font-size:20px;color:#cfcfd4;display:flex;align-items:center;justify-content:center">Give the work. Watch it get done ↗</div>`);
+
+const typedText='Launch VYRA, my home-fitness brand.';
+/* =============== seek =============== */
+window.seek=function(t){
+ // S1
+ {const [o,b]=env(t,-1,0,2.55,3.45,22);fx(S1,o,b);if(o>0){const p=eio(lin(t,0,3.4));wall.style.transform=`perspective(2400px) rotateX(38deg) rotateZ(-15deg) translate(${lerp(40,-260,p)}px,${lerp(60,-190,p)}px) scale(${lerp(1.0,1.07,p)})`;S1.style.filter=`blur(${b.toFixed(2)}px) brightness(${1-0.6*lin(t,2.55,3.4)})`;}}
+ // S2
+ {const [o,b]=env(t,3.45,3.9,6.6,7.12,20);fx(S2,o,0);if(o>0){S2.style.filter=b>.05?`blur(${b}px)`:'none';
+  fx(p2,eo(lin(t,3.45,3.85)),0);
+  w2.forEach((e,i)=>{const a=eo(lin(t,3.45+i*.1,3.8+i*.1));fx(e,a,(1-a)*16,`translateY(${(1-a)*14}px)`);});
+  {const a=eo(lin(t,4.2,4.6));fx(sub2,a,(1-a)*10);} {const a=eo(lin(t,4.4,4.8));fx(chips,a,(1-a)*10,`translateY(${(1-a)*12}px)`);}
+  {const a=eo(lin(t,3.45,4.3));fx(strip,a,0,`translateX(${-60-(t-3.45)*75}px) translateY(${(1-a)*80}px)`);}}}
+ // S3
+ {const [o,b]=env(t,7.12,7.35,12.3,12.72,20);fx(S3,o,b);if(o>0){
+  {const a=eo(lin(t,7.15,7.55));fx(c3a,a,(1-a)*16);} {const a=eo(lin(t,7.75,8.2));fx(c3b,a,(1-a)*16);} {const a=eo(lin(t,8.05,8.45));fx(c3c,a,(1-a)*10);}
+  {const a=eo(lin(t,7.12,7.4));fx(win3,a,0);}
+  const n=Math.floor(clamp((t-7.65)/1.6)*typedText.length);const blink=(Math.floor(t*3)%2==0)&&t<9.6;
+  typed.innerHTML=`<span style="color:#ee5aa0">›</span> ${typedText.slice(0,n)}${t<9.6?`<span style="display:inline-block;width:11px;height:22px;background:${blink?'#ddd':'transparent'};vertical-align:-3px;margin-left:2px"></span>`:''}`;
+  const R=(el,t0,html)=>{const a=eo(lin(t,t0,t0+.35));fx(el,a,(1-a)*10);el.innerHTML=html;};
+  R(r1,9.55,`${ck} <b style="color:#f0f0f2;font-weight:600">Project Manager</b> <span style="color:#777">·</span> launch plan ready`);
+  R(r2,10.05,t<10.85?`${dotc('#ee93bd')} <b style="color:#f0f0f2;font-weight:600">Logo</b> <span style="color:#777">·</span> drawing nine ideas…`:`${ck} <b style="color:#f0f0f2;font-weight:600">Logo</b> <span style="color:#777">·</span> nine ideas ready — pick one`);
+  R(r3,10.85,t<11.7?`${dotc('#c46aa6')} <b style="color:#f0f0f2;font-weight:600">Brand Kit</b> <span style="color:#777">·</span> building the brand board…`:`${ck} <b style="color:#f0f0f2;font-weight:600">Brand Kit</b> <span style="color:#777">·</span> brand board ready`);
+  R(r4,11.3,`${dotc('#ee5aa0')} <b style="color:#f0f0f2;font-weight:600">Website</b> <span style="color:#777">·</span> next in line`);
+  const fly=(el,t0,r0,r1)=>{const a=eo(lin(t,t0,t0+.5));fx(el,a,(1-a)*8,`translateY(${(1-a)*260}px) rotate(${lerp(r0,r1,a)}deg) scale(${lerp(.85,1,a)})`);};
+  fly(cardA,11.0,-14,-6);fly(cardB,11.7,10,4);fly(cardC,11.95,14,7);}}
+ // S4
+ {const [o,b]=env(t,12.75,12.9,15.2,15.65,18);fx(S4,o,b);if(o>0){
+  {const a=eo(lin(t,12.85,13.25));fx(p4,a,(1-a)*8);} {const a=eo(lin(t,13.0,13.45));fx(s4,a,(1-a)*10);}
+  {const a=eo(lin(t,13.45,14.15));fx(lg4,a,(1-a)*24,`scale(${lerp(.94,1,a)})`);}}}
+ // S5
+ {const [o,b]=env(t,15.7,15.8,17.35,17.8,22);fx(S5,o,b);if(o>0){
+  fx(neb,eo(lin(t,16.55,17.2)),0,`scale(${1+.04*lin(t,15.7,17.8)})`);
+  [15.85,16.35,16.6].forEach((t0,i)=>{const a=eo(lin(t,t0,t0+.45));fx(w5[i],a,(1-a)*20);});}}
+ // S6
+ {const [o,b]=env(t,17.85,18.0,23.8,24.22,22);fx(S6,o,b);if(o>0){
+  const x=clamp((t-18.3)/3.95);const v=52*(1-Math.pow(1-x,2.3));const vel=52*2.3*Math.pow(1-x,1.3)/3.95;
+  fx(p6,eo(lin(t,17.85,18.2)),0);
+  onesS.style.transform=`translateY(${-(v%10)*DH}px)`;const tens=Math.floor(v/10)+Math.max(0,(v%10)-9);tensS.style.transform=`translateY(${-tens*DH}px)`;
+  const g=eo(lin(t,22.25,22.65));onesS.style.filter=`blur(${Math.min(14,vel*0.55)}px)`;tensS.style.filter=`blur(${Math.min(6,vel*0.06)}px)`;
+  fx(cnt,(t<17.95?.4:1)*(1-g),0);fx(big52,g,0);fx(glow,g,0);
+  const pp=lin(t,22.25,24.2);PR.forEach(([e,a,d,r])=>{const dd=d*(.55+.6*eo(pp));e.style.left=(960+Math.cos(a)*dd*1.45)+'px';e.style.top=(450+Math.sin(a)*dd*.8+pp*20*r)+'px';e.style.opacity=g*(1-pp*.4)*(.4+.6*r);});
+  const tko=1-lin(t,22.2,22.55);tk.forEach((e,i)=>{const d=(i+1)-v;const ad=Math.abs(d);const op=ad<.5?1:ad<1.5?lerp(1,.5,ad-.5):ad<2.5?lerp(.5,.12,ad-1.5):Math.max(0,.12-(ad-2.5)*.12);e.style.left=(960+d*340)+'px';e.style.opacity=op*tko*eo(lin(t,18.0,18.3));e.style.color=ad<.5?'#fff':'#9a9aa0';e.style.filter=ad>1.5?'blur(1.5px)':'none';e.style.display=op*tko>0.005?'block':'none';});
+  const vv=Math.max(0.01,v);const n=Math.floor(vv);let pts=PTS.slice(0,n+1);const fr=vv-n;if(n<52){const A=PTS[n],B=PTS[n+1];pts.push([lerp(A[0],B[0],fr),lerp(A[1],B[1],fr)]);}
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');const last=pts[pts.length-1];
+  document.getElementById('cl').setAttribute('d',d);document.getElementById('ca').setAttribute('d',d+` L${last[0]} 1080 L0 1080 Z`);const cd=document.getElementById('cd');cd.setAttribute('cx',last[0]);cd.setAttribute('cy',last[1]);
+  chart.style.opacity=eo(lin(t,18.0,18.4));
+  {const a=eo(lin(t,22.7,23.15));fx(tag6,a,(1-a)*14);}}}
+ // S7
+ {const [o,b]=env(t,24.22,24.6,29.35,29.9,26);fx(S7,o,b);if(o>0){
+  const a=eo(lin(t,24.22,25.0));const p=eio(lin(t,25.4,29.4));
+  const s=lerp(.72,1,a)*lerp(1,1.62,p);const tx=lerp(0,-40,p)+Math.sin(p*3.1)*30, ty=lerp(0,-560,p);
+  cam7.style.transform=`translate(${tx}px,${ty+ (1-a)*60}px) scale(${s})`;}}
+ // S8
+ {const [o,b]=env(t,29.95,30.25,41.3,41.7,22);fx(S8,o,b);if(o>0){
+  fx(p8,eo(lin(t,30.0,30.35)),0);
+  let si=SUB.findIndex(s=>t<s[1]);if(si<0)si=SUB.length-1;const S=SUB[si];
+  // rail position
+  const sp=lin(t,S[0]+.15,S[1]-.2);let rp;if(S[5]==S[6])rp=S[5];else rp=lerp(S[5],S[6],eio(sp));
+  if(si>0&&t<S[0]+.35){const prev=SUB[si-1];rp=lerp(prev[6],S[5],eio(lin(t,S[0],S[0]+.35)));}
+  rl.forEach((e,i)=>{const d=i-rp;const ad=Math.abs(d);e.style.left=(965+d*330)+'px';const op=ad<.5?1:ad<1.5?lerp(1,.62,ad-.5):ad<2.5?lerp(.62,.18,ad-1.5):Math.max(0,.18-(ad-2.5)*.2);e.style.opacity=op*eo(lin(t,30.05,30.4));e.style.display=op>0.005?'block':'none';e.querySelector('.nm').style.color=ad<.5?'#fff':'#a3a3a9';e.style.filter=ad>1.6?'blur(1.5px)':'none';const ckw=d<-.5?26:0;e.querySelector('.ck').style.width=ckw+'px';e.querySelector('.ck').style.marginRight=ckw?'8px':'0';});
+  // left text
+  const L=left8.children;if(left8.dataset.si!=si){left8.dataset.si=si;L[0].innerHTML=S[2];L[1].innerHTML=S[3];L[2].innerHTML=S[4];}
+  {const a=eo(lin(t,S[0]+.02,S[0]+.4)), z=si<SUB.length-1?1-lin(t,S[1]-.2,S[1]-.02):1;const v=Math.min(a,z);fx(left8,v,(1-v)*14);}
+  grp.forEach((g,gi)=>{if(gi!=si){g.style.display='none';return;}g.style.display='block';
+   const z=si<SUB.length-1?1-eio(lin(t,S[1]-.22,S[1]-.02)):1;
+   GCARDS[gi].forEach((c,k)=>{const t0=S[0]+GDEL[gi][k];const a=eo(lin(t,t0,t0+.45));const v=Math.min(a,z);const base=c.style.transform.replace(/translate\([^)]*\)\s*/g,'').replace(/scale\([^)]*\)\s*/g,'');c.dataset.b=c.dataset.b||base;fx(c,v,(1-v)*16,`translate(${(1-a)*90}px,${(1-a)*40 + (t-t0)*-6}px) scale(${lerp(.93,1,a)}) ${c.dataset.b}`);});});}}
+ // S9
+ {const [o,b]=env(t,41.62,41.95,45.15,45.7,22);fx(S9,o,b);if(o>0){
+  colEls.forEach((c,i)=>{const h=+c.dataset.h;const dir=i%2?1:-1;const off=((t-41.6)*75*(dir)+ (dir>0?-h:0));c.style.transform=`translateY(${(dir>0?-h*.5:-60)+(t-41.6)*75*dir}px)`;});
+  [41.8,42.35,42.9].forEach((t0,i)=>{const a=eo(lin(t,t0,t0+.4));fx(t9l[i],a,(1-a)*16,`translateY(${(1-a)*16}px)`);});}}
+ // S10
+ {const [o,b]=env(t,45.68,45.9,50.8,51.22,20);fx(S10,o,b);if(o>0){
+  fx(te,eo(lin(t,45.75,46.15)),(1-eo(lin(t,45.75,46.15)))*12);
+  const R=[[45.75,47.15],[47.55,49.0],[49.4,51.3]];
+  W10.forEach((w,i)=>{const [a0,a1]=R[i];const a=eo(lin(t,a0,a0+.4)), z=i<2?1-eio(lin(t,a1,a1+.3)):1;const v=Math.min(a,z);fx(w,v,(1-v)*24,`scale(${lerp(.97,1,a)})`);
+   c10[i].forEach((c,k)=>{const t0=a0-.1+k*.1;const ca=eo(lin(t,t0,t0+.5));const cv=Math.min(ca,z);const dx=(k%2?1:-1)*(1-ca)*60;fx(c,cv,(1-cv)*14,`translate(${dx+(t-t0)*(k%2?-8:8)}px,${(1-ca)*40-(t-t0)*10}px) rotate(${c.dataset.r}deg)`);});});}}
+ // S11
+ {const [o,b]=env(t,51.22,51.45,54.95,55.42,22);fx(S11,o,b);if(o>0){
+  {const a=eo(lin(t,51.3,51.75));fx(t11,a,(1-a)*16);const u=eo(lin(t,51.8,52.25));fx(t11.querySelector('.u2'),u,(1-u)*14);} {const a=eo(lin(t,51.35,51.85));fx(ad1,a,(1-a)*14,`translateY(${(1-a)*50}px) rotate(-4deg)`);} {const a=eo(lin(t,51.5,52.0));fx(ad2,a,(1-a)*14,`translateY(${(1-a)*50}px) rotate(3.5deg)`);}
+  {const a=eo(lin(t,51.7,52.15));fx(bar11,a,(1-a)*10,`translateY(${(1-a)*30}px)`);}
+  const done=t>=53.7;bt.innerHTML=done?'✓ Approved':'Approve';bt.style.background=done?'#3fcf7f':'#f4f4f6';bt.style.color=done?'#06240f':'#111';bt.style.width=done?'190px':'164px';
+  st.textContent=done?'Approved by you. Now the ads can run.':'Budget is on hold until you say yes.';
+  const press=t>53.62&&t<53.8?.94:1;bt.style.transform=`scale(${press})`;
+  const cp=eio(lin(t,52.45,53.55));const cx=lerp(1500,1690,cp),cy=lerp(1045,780,cp);fx(cur,lin(t,52.35,52.55)*(1-lin(t,54.3,54.6)),0,`translate(${cx}px,${cy}px)`);}}
+ // S12
+ {const [o,b]=env(t,55.42,55.6,58.9,59.45,0);fx(S12,o,0);if(o>0){
+  const sa=eo(lin(t,55.45,56.3));ST.forEach(([e,x,y,vx,vy])=>{const k=t-55.4;e.style.transform=`translate(${x+vx*k + (x-960)*.03*k}px,${y+vy*k+(y-540)*.03*k}px)`;});stars.style.opacity=sa;
+  {const a=eo(lin(t,55.5,56.25));fx(lg12,a,(1-a)*22,`scale(${lerp(.95,1,a)})`);} {const a=eo(lin(t,56.15,56.6));fx(tg12,a,(1-a)*14);} {const a=eo(lin(t,56.45,56.9));fx(pl12,a,(1-a)*10);}}}
+};
+window.seek(0);
+</script></body></html>
